@@ -29,4 +29,8 @@ open dist/Saylori.app
 
 `native/` 是当前原生工程；`scripts/` 是构建与验证工具。历史 HTML 品牌原型、真实会议文字、诊断日志、截图和签名产物保留在开发机，默认不跟踪。
 
+- [架构与数据流](docs/architecture.md)
+- [构建、验证与提交检查](docs/development.md)
+- [本轮代码审查与优化](docs/code-review.md)
+
 SpeexDSP 代码及其 BSD 许可证位于 `native/Sources/SpeexDSP/`，来源及版本见 `ORIGIN.md`。应用代码尚未指定开源许可证。

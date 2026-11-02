@@ -18,7 +18,7 @@ import Combine
     private var streamClocks:[String:Date]=[:]
     private var fastSystem:AnyObject?
     private var fastMicrophone:AnyObject?
-    var displayCaptions:[CaptionSegment]{CaptionPresentation.live(cloud:captions.segments,drafts:previewDrafts)}
+    var displayCaptions:[CaptionSegment]{CaptionPresentation.live(cloud:captions.recentSegments(limit:64),drafts:previewDrafts)}
     var displayCurrent:CaptionSegment?{displayCaptions.last}
     var displayContext:[CaptionSegment]{Array(displayCaptions.dropLast().suffix(24))}
     @Published var notice=""
@@ -288,7 +288,9 @@ import Combine
     private func beginMicrophone(_ token:UUID){
         guard microphone==nil else{return}
         let micToken=UUID();microphoneGeneration=micToken
-        let route=MicrophoneRoute();microphone=route;microphoneBusy=true;microphoneProcessingMode=nil
+        let echoCanceller=self.echoCanceller
+        let route=MicrophoneRoute(processAudio:{echoCanceller.process($0)})
+        microphone=route;microphoneBusy=true;microphoneProcessingMode=nil
         route.nearSpeechGate.setEnabled(microphoneNearField)
         route.nearSpeechGate.setThresholdDB(microphoneThresholdDB)
         microphoneRMSDB = -120;microphonePassing=false
@@ -297,8 +299,6 @@ import Combine
             self.microphoneRMSDB=observation.rmsDB;self.microphonePassing=observation.isPassing
             TestDiagnostics.update(["microphoneRMSDB":observation.rmsDB,"microphoneThresholdDB":observation.thresholdDB,"microphonePassing":observation.isPassing])
         }
-        let echoCanceller=self.echoCanceller
-        route.processAudio={echoCanceller.process($0)}
         captions.beginStream(route.service.sessionID,origin:.microphone)
         route.audio.onDiagnostics={values in Task{@MainActor in TestDiagnostics.record("microphone-format",values)}}
         route.audio.onProcessingMode={[weak self] mode in Task{@MainActor in
@@ -458,26 +458,5 @@ import Combine
         let service=ASTClient()
         do{try await service.connect(credentials);_ = await service.finish();return "连接成功，可以开始翻译"}
         catch{return error.localizedDescription}
-    }
-}
-
-struct AudioSendStats:Sendable{let queueMS:Double;let sendMS:Double;let audioEndMS:Double;let sendUptime:Double;let streamStartedUptime:Double}
-
-actor AudioRelay {
-    private let service:ASTClient
-    private var enabled=false
-    init(service:ASTClient){self.service=service}
-    func enable(){enabled=true}
-    private var sentBytes=0
-    private var streamStartedUptime:Double?
-    func forward(_ packet:AudioPacket) async throws->AudioSendStats? {
-        guard enabled else{return nil}
-        let now=ProcessInfo.processInfo.systemUptime
-        let age=now-packet.queuedAt
-        guard age<0.4 else{throw SayError.message("音频发送已落后，已停止收听并保留文字。请检查网络后重新开始。")}
-        try await service.send(packet.data)
-        if streamStartedUptime==nil{streamStartedUptime=packet.queuedAt-Double(packet.data.count)/32000}
-        sentBytes += packet.data.count
-        return AudioSendStats(queueMS:age*1000,sendMS:(ProcessInfo.processInfo.systemUptime-now)*1000,audioEndMS:Double(sentBytes)/32,sendUptime:now,streamStartedUptime:streamStartedUptime!)
     }
 }

@@ -5,6 +5,31 @@ final class TranscriptTests:XCTestCase {
     private func e(_ type:Int,_ text:String="",_ start:Int=0,_ end:Int=0)throws->ASTEvent {
         try ASTEvent(data:Proto.number(2,UInt64(type))+Proto.string(4,text)+Proto.number(5,UInt64(start))+Proto.number(6,UInt64(end)))
     }
+    func testRecentWindowSkipsEmptyTurnsAndLeavesFullArchiveIntact()throws {
+        var state=CaptionState();state.beginStream("long-meeting")
+        for index in 0..<1000 {
+            try state.apply(e(650,"",index*100))
+            try state.apply(e(652,"Sentence \(index).",index*100,index*100+90))
+        }
+        try state.apply(e(650,"",100000));try state.apply(e(652,"",100000))
+        let recent=state.recentSegments(limit:64)
+        XCTAssertEqual(recent.count,64)
+        XCTAssertEqual(recent.first?.source,"Sentence 936.")
+        XCTAssertEqual(recent.last?.source,"Sentence 999.")
+        XCTAssertEqual(state.segments.count,1000)
+        XCTAssertEqual(state.context.map(\.source),["Sentence 996.","Sentence 997.","Sentence 998."])
+        XCTAssertTrue(state.recentSegments(limit:0).isEmpty)
+        XCTAssertTrue(state.recentSegments(limit:-1).isEmpty)
+    }
+    func testRecentWindowIncludesTranslationOnlyAndLatestCorrections()throws {
+        var state=CaptionState();state.beginStream("one")
+        try state.apply(e(653,"",100));try state.apply(e(655,"先到的中文",100,200))
+        try state.apply(e(650,"",100));try state.apply(e(652,"The corrected source.",100,200))
+        try state.apply(e(653,"",300));try state.apply(e(655,"下一句",300,400))
+        XCTAssertEqual(state.recentSegments(limit:10),state.segments)
+        XCTAssertEqual(state.previous,"先到的中文")
+        XCTAssertEqual(state.recentSegments(limit:1).first?.translation,"下一句")
+    }
     func testTranslationArrivingBehindTwoSourcesStaysPaired()throws {
         var state=CaptionState();state.beginStream("one")
         try state.apply(e(650,"",100));try state.apply(e(652,"First.",100,500))

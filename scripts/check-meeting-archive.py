@@ -19,7 +19,11 @@ audit['emptyProtocolSegments']=sum(not s['source'] and not s['translation'] for 
 normalize=lambda text: re.sub(r'\s+', ' ', text).strip()
 audit['mdHasEverySourceAndTranslation']=all(normalize(s['source']) in normalize(md) and normalize(s['translation']) in normalize(md) for s in record['segments'])
 audit['ended']=record.get('endedAt') is not None;audit['interruptions']=record.get('interruptions',[])
-reference=(out.parent/'reference.txt').read_text()
+referencePath=pathlib.Path(sys.argv[2]) if len(sys.argv)>2 else out.parent/'reference.txt'
+if not referencePath.exists() and len(sys.argv)==2:
+ (out/'archive-audit.json').write_text(json.dumps(audit,ensure_ascii=False,indent=2))
+ print(json.dumps(audit,ensure_ascii=False,indent=2));sys.exit(0)
+reference=referencePath.read_text()
 reference=' '.join(l.strip() for l in reference.splitlines() if not re.search(r'June 12, 2024|Page \d+ of|Transcript of Chair',l))
 reference=reference.replace('CHAIR POWELL.','')
 sourceText=' '.join(s['source'] for s in record['segments'] if s.get('origin','system')=='system')

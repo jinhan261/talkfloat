@@ -10,6 +10,7 @@ args=['--self-test',str(out)]
 args.append('--pin-test-popover')
 if '--dark' in sys.argv:args.append('--dark-appearance')
 if '--chrome' in sys.argv:args.append('--chrome-test')
+if '--with-microphone' in sys.argv:args.append('--with-microphone')
 subprocess.run(['/usr/bin/open','-n','-a',str(app),'--stdout',str(out/'app-console.log'),'--stderr',str(out/'app-console.log'),'--args',*args],check=True)
 pid=None
 for _ in range(50):
@@ -20,7 +21,7 @@ for _ in range(50):
  time.sleep(.1)
 if pid is None:raise RuntimeError('App process not found')
 (out/'pid').write_text(str(pid))
-last=None;played=set();player=None;marker=None;playbacks=[];metrics=[]
+last=None;played=set();player=None;marker=None;playbacks=[];metrics=[];completed=False
 try:
  for tick in range(3000):
   try:os.kill(pid,0)
@@ -42,7 +43,8 @@ try:
    if player.returncode:raise RuntimeError('Fixture playback failed')
    playbacks[-1]['finished']=time.time()
    (out/marker).touch();player=None
-  if stage in ('completed','failed','timeout'):break
+  if stage in ('completed','failed','timeout'):
+   completed=stage=='completed';break
   time.sleep(.1)
  else:print('Harness timed out',flush=True)
 finally:
@@ -50,3 +52,4 @@ finally:
  (out/'playbacks.json').write_text(json.dumps(playbacks,indent=2))
  (out/'performance.json').write_text(json.dumps(metrics,indent=2))
  print('App left running for native UI inspection; PID',pid,flush=True)
+if not completed:sys.exit(1)

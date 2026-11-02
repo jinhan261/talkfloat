@@ -16,9 +16,10 @@ import SayloriCore
     var onSent:((AudioSendStats)->Void)?
     var onGate:((NearSpeechGate.Observation)->Void)?
     var onAudio:(@Sendable (Data,AudioSendStats)->Void)?
-    var processAudio:(@Sendable (AudioPacket)->AudioPacket)?
+    private let processAudio:@Sendable (AudioPacket)->AudioPacket
+    init(processAudio:@escaping @Sendable (AudioPacket)->AudioPacket = {$0}){self.processAudio=processAudio}
     func start(_ credentials:Credentials){
-        connection=Task{
+        connection=Task{[self] in
             do{
                 try await audio.start()
                 guard !ended else{await audio.stop();return}
@@ -26,28 +27,18 @@ import SayloriCore
                 let audioObserver=onAudio
                 let processor=processAudio
                 sender=Task.detached{[weak self,audio=audio,gate=nearSpeechGate] in
-                    var pending:[AudioPacket]=[]
+                    var packets=MicrophonePacketProcessor(gate:gate,transform:processor)
                     var lastDiagnostics=0.0
                     var lastMeter=0.0
                     for try await packet in audio.frames{
                         try Task.checkCancellation()
-                        // Two bounded packets allow the 80 ms future reference to be
-                        // fully captured despite SCStream callback jitter.
-                        pending.append(packet)
-                        guard pending.count>2 else{continue}
-                        let previous=pending.removeFirst()
-                        let pass=gate.shouldPass(previous.data,upcoming:pending.map(\.data))
-                        let processed=processor?(previous) ?? previous
-                        let cleaned=pass ? processed:AudioPacket(data:Data(count:processed.data.count),queuedAt:processed.queuedAt)
+                        guard let cleaned=packets.append(packet) else{continue}
                         if let stats=try await relay.forward(cleaned){audioObserver?(cleaned.data,stats);await self?.sent(stats)}
                         let now=ProcessInfo.processInfo.systemUptime
                         if now-lastMeter>=0.16{lastMeter=now;await self?.reportGate(gate.observation)}
                         if now-lastDiagnostics>=1{lastDiagnostics=now;let metrics=gate.diagnostics;await MainActor.run{TestDiagnostics.record("microphone-gate",metrics)}}
                     }
-                    for packet in pending {
-                        let pass=gate.shouldPass(packet.data)
-                        let processed=processor?(packet) ?? packet
-                        let cleaned=pass ? processed:AudioPacket(data:Data(count:processed.data.count),queuedAt:processed.queuedAt)
+                    for cleaned in packets.finish() {
                         if let stats=try await relay.forward(cleaned){audioObserver?(cleaned.data,stats);await self?.sent(stats)}
                     }
                 }

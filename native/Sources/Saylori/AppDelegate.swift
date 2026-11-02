@@ -3,60 +3,6 @@ import SwiftUI
 import Combine
 import SayloriCore
 
-@MainActor final class SubtitlePanel:NSPanel {
-    override var canBecomeKey:Bool{true}
-    override var canBecomeMain:Bool{false}
-    var dragLocked=false
-    private var dragOrigin:NSPoint?
-    private var mouseOrigin=NSPoint.zero
-    private var resizeOrigin:NSRect?
-    private var resizeEdges:CaptionEdges=[]
-    override func sendEvent(_ event:NSEvent){
-        switch event.type {
-        case .leftMouseDown:
-            let point=event.locationInWindow
-            let tools=NSRect(x:frame.width-144,y:frame.height-42,width:124,height:30)
-            let edges=CaptionEdges.hit(point,size:frame.size)
-            if !dragLocked,!edges.isEmpty {
-                resizeOrigin=frame;resizeEdges=edges;mouseOrigin=convertPoint(toScreen:point);return
-            }
-            if !dragLocked,!tools.contains(point){
-                dragOrigin=frame.origin;mouseOrigin=convertPoint(toScreen:point)
-                return
-            }
-        case .leftMouseDragged:
-            if let origin=resizeOrigin {
-                let point=convertPoint(toScreen:event.locationInWindow)
-                setFrame(resizeEdges.resizing(origin,delta:NSSize(width:point.x-mouseOrigin.x,height:point.y-mouseOrigin.y),minimum:minSize,maximum:maxSize),display:true)
-                return
-            }
-            if let origin=dragOrigin {
-                let point=convertPoint(toScreen:event.locationInWindow)
-                setFrameOrigin(NSPoint(x:origin.x+point.x-mouseOrigin.x,y:origin.y+point.y-mouseOrigin.y))
-                return
-            }
-        case .leftMouseUp:
-            if resizeOrigin != nil {
-                resizeOrigin=nil
-                UserDefaults.standard.set(NSStringFromPoint(frame.origin),forKey:"captionOrigin")
-                UserDefaults.standard.set(NSStringFromSize(frame.size),forKey:"captionSize")
-                TestDiagnostics.record("edge-resize",["edges":resizeEdges.rawValue,"frame":NSStringFromRect(frame)])
-                return
-            }
-            if let origin=dragOrigin {
-                dragOrigin=nil
-                UserDefaults.standard.set(NSStringFromPoint(frame.origin),forKey:"captionOrigin")
-                TestDiagnostics.record("content-drag",["moved":origin != frame.origin,"frame":NSStringFromRect(frame)])
-                return
-            }
-        default:break
-        }
-        // Scroll-wheel events still reach the SwiftUI scroll views. Toolbar clicks
-        // and the resize grip keep their normal behavior.
-        super.sendEvent(event)
-    }
-}
-
 @MainActor final class AppDelegate:NSObject,NSApplicationDelegate,NSWindowDelegate {
     let model=SessionModel()
     private var status:NSStatusItem!
@@ -113,11 +59,17 @@ import SayloriCore
         }.store(in:&subscriptions)
         NotificationCenter.default.addObserver(self,selector:#selector(screenChanged),name:NSApplication.didChangeScreenParametersNotification,object:nil)
         DistributedNotificationCenter.default().addObserver(self,selector:#selector(showExistingInstance),name:Notification.Name("app.saylori.show"),object:nil)
-        DispatchQueue.main.asyncAfter(deadline:.now()+0.5){
+        DispatchQueue.main.asyncAfter(deadline:.now()+0.5){[self] in
             self.showPopover()
-            if CommandLine.arguments.contains("--ui-review"){self.harness=Task{await self.runVisualReview()}}
-            else if CommandLine.arguments.contains("--meeting-test"){self.harness=Task{await self.runMeetingTest()}}
-            else if TestDiagnostics.directory != nil{self.harness=Task{await self.runSelfTest()}}
+            if CommandLine.arguments.contains("--ui-review") || TestDiagnostics.directory != nil {
+                let runner=AppTestHarness(model:self.model,panel:self.panel,popover:self.popover,
+                    showPopover:{[weak self] in self?.showPopover()},resetPanel:{[weak self] in self?.resetPanel()})
+                self.harness=Task{
+                    if CommandLine.arguments.contains("--ui-review"){await runner.runVisualReview()}
+                    else if CommandLine.arguments.contains("--meeting-test"){await runner.runMeetingTest()}
+                    else{await runner.runSelfTest()}
+                }
+            }
             else if CommandLine.arguments.contains("--audio-check"){Task{self.model.notice=await self.model.testAudio()}}
             else if CommandLine.arguments.contains("--preview-caption"){self.model.previewCaption()}
         }
@@ -169,167 +121,6 @@ import SayloriCore
         TestDiagnostics.record("position",["frame":NSStringFromRect(panel.frame),"locked":model.locked])
     }
     func windowDidResize(_ notification:Notification){UserDefaults.standard.set(NSStringFromSize(panel.frame.size),forKey:"captionSize")}
-    private func runVisualReview() async {
-        // A labelled style preview only: no Keychain read, microphone, capture or API calls.
-        if let window=popover.contentViewController?.view.window{TestDiagnostics.snapshot(window,"menu-panel")}
-        model.showingSettings=true
-        try? await Task.sleep(for:.milliseconds(250))
-        if let window=popover.contentViewController?.view.window{TestDiagnostics.snapshot(window,"menu-settings")}
-        model.showingSettings=false
-        let savedStyle=model.captionStyle,savedOpacity=model.backgroundOpacity,savedSource=model.showSource,savedFont=model.fontSize
-        let savedFrame=panel.frame
-        model.previewCaption();resetPanel();popover.performClose(nil)
-        panel.setContentSize(NSSize(width:720,height:340));model.fontSize=24;model.showSource=false
-        for style in CaptionStyle.allCases {
-            model.captionStyle=style
-            for opacity in [0.45,0.80,1.0] {
-                model.backgroundOpacity=opacity
-                try? await Task.sleep(for:.milliseconds(250))
-                TestDiagnostics.snapshot(panel,"\(style.rawValue)-\(Int(opacity*100))")
-            }
-        }
-        model.captionStyle = .dark;model.backgroundOpacity=0.85;model.fontSize=30;model.showSource=true
-        panel.setContentSize(NSSize(width:400,height:300))
-        try? await Task.sleep(for:.milliseconds(250))
-        TestDiagnostics.snapshot(panel,"narrow-bilingual")
-        model.captionStyle=savedStyle;model.backgroundOpacity=savedOpacity;model.showSource=savedSource;model.fontSize=savedFont
-        panel.setContentSize(NSSize(width:720,height:340));resetPanel()
-        // Keep pointer-driven review on the primary display; normal placement is unchanged.
-        if let screen=NSScreen.screens.first?.visibleFrame{panel.setFrameOrigin(NSPoint(x:screen.midX-300,y:screen.minY+100))}
-        panel.setFrame(savedFrame,display:true)
-        TestDiagnostics.update(["stage":"visual-ready","captionStyle":model.captionStyle.rawValue,"backgroundOpacity":model.backgroundOpacity,"visible":panel.isVisible])
-        showPopover()
-    }
-    private func runMeetingTest() async {
-        guard let directory=TestDiagnostics.directory else{return}
-        TestDiagnostics.update(["stage":"credential-wait"])
-        for _ in 0..<300{if !model.access.working{break};try? await Task.sleep(for:.milliseconds(200))}
-        guard model.configured else{TestDiagnostics.update(["stage":"failed","error":"Credentials unavailable"]);return}
-        let oldMic=model.microphoneEnabled
-        let oldSource=model.source,savedFrame=panel.frame
-        model.source = .chrome
-        model.microphoneEnabled=CommandLine.arguments.contains("--with-microphone")
-        TestDiagnostics.update(["stage":"armed"])
-        for _ in 0..<1800{
-            if FileManager.default.fileExists(atPath:directory.appendingPathComponent("start").path){break}
-            try? await Task.sleep(for:.milliseconds(200))
-        }
-        guard FileManager.default.fileExists(atPath:directory.appendingPathComponent("start").path) else{
-            model.microphoneEnabled=oldMic;model.source=oldSource
-            TestDiagnostics.update(["stage":"cancelled","error":"No start marker; no capture was started"]);return
-        }
-        resetPanel();model.start()
-        guard await waitForLive() else{return}
-        TestDiagnostics.update(["stage":"listening","startedUptime":ProcessInfo.processInfo.systemUptime])
-        let started=Date();var minute = -1;var injected=false;var lastShown=""
-        while Date().timeIntervalSince(started)<900 {
-            if model.phase != .live && model.phase != .connecting{break}
-            let elapsed=Date().timeIntervalSince(started)
-            if let item=model.displayCurrent {
-                let key=item.id.uuidString+item.source+item.translation
-                if key != lastShown{lastShown=key;TestDiagnostics.record("caption-visible",["origin":item.audioOrigin.rawValue,"source":item.source,"text":item.translation,"preview":item.provisional == true])}
-            }
-            if CommandLine.arguments.contains("--recovery-test"){
-                if elapsed>30{break}
-                if elapsed>7 && !injected{injected=true;await model.injectTransientFailureForTest()}
-            }
-            TestDiagnostics.update(["elapsed":elapsed,"sentFrames":model.sentFrames,"segments":model.captions.segments.count,"microphoneReady":model.microphoneReady,"microphoneNotice":model.microphoneNotice,"micLevel":model.microphoneLevel,"systemLevel":model.level])
-            if Int(elapsed/60)>minute{minute=Int(elapsed/60);TestDiagnostics.snapshot(panel,"minute-\(minute)")}
-            if FileManager.default.fileExists(atPath:directory.appendingPathComponent("finish").path){break}
-            if FileManager.default.fileExists(atPath:directory.appendingPathComponent("microphone-on").path),!model.microphoneEnabled{model.setMicrophone(true)}
-            try? await Task.sleep(for:.seconds(1))
-        }
-        try? await Task.sleep(for:.seconds(5))
-        TestDiagnostics.snapshot(panel,"final-caption")
-        await model.stop(paused:true)
-        TestDiagnostics.update(["paused":model.phase == .paused,"pauseResourcesReleased":model.resourcesReleased])
-        await model.stop()
-        model.microphoneEnabled=oldMic
-        model.source=oldSource;UserDefaults.standard.set(oldSource.id,forKey:"sourceID")
-        panel.setFrame(savedFrame,display:true)
-        UserDefaults.standard.set(NSStringFromPoint(savedFrame.origin),forKey:"captionOrigin")
-        UserDefaults.standard.set(NSStringFromSize(savedFrame.size),forKey:"captionSize")
-        TestDiagnostics.update(["stage":"completed","elapsed":Date().timeIntervalSince(started),"resourcesReleased":model.resourcesReleased,"segments":model.captions.segments.count,"microphoneReady":model.microphoneReady,"microphoneSegments":model.captions.segments.filter{$0.audioOrigin == .microphone}.count])
-        showPopover()
-        try? await Task.sleep(for:.milliseconds(250))
-        if let window=popover.contentViewController?.view.window{TestDiagnostics.snapshot(window,"menu-panel")}
-    }
-    private func runSelfTest() async {
-        TestDiagnostics.update(["stage":"credential-wait"])
-        for _ in 0..<900{
-            if !model.access.working{break}
-            try? await Task.sleep(for:.milliseconds(200))
-        }
-        guard model.configured else{TestDiagnostics.update(["stage":"failed","error":"Credentials unavailable"]);return}
-        TestDiagnostics.update(["stage":"starting","configured":model.configured,"credentialMode":model.credentials.legacy ? "App ID / Token":"API Key"])
-        model.source = CommandLine.arguments.contains("--chrome-test") ? .chrome:.system
-        resetPanel()
-        model.start()
-        guard await waitForLive() else{return}
-        TestDiagnostics.snapshot(panel,"01-listening")
-        TestDiagnostics.update(["stage":"listening"])
-        await collectSample(marker:"first-finished",prefix:"02")
-        guard model.phase == .live else{return}
-        TestDiagnostics.update(["firstSentFrames":model.sentFrames,"firstEvents":model.receivedEvents,"firstTranslation":model.captions.translation])
-        await model.stop(paused:true)
-        TestDiagnostics.snapshot(panel,"03-paused")
-        TestDiagnostics.update(["paused":model.phase == .paused,"pauseResourcesReleased":model.resourcesReleased])
-        model.start()
-        guard await waitForLive() else{return}
-        model.toggleCaption()
-        TestDiagnostics.update(["hideKeepsLive":model.phase == .live && !panel.isVisible])
-        model.toggleCaption()
-        TestDiagnostics.update(["showRestoresPanel":panel.isVisible,"stage":"resumed"])
-        await collectSample(marker:"second-finished",prefix:"04")
-        guard model.phase == .live else{return}
-        TestDiagnostics.update(["secondSentFrames":model.sentFrames,"secondEvents":model.receivedEvents,"secondTranslation":model.captions.translation])
-        model.toggleCaption();model.resetCaption()
-        TestDiagnostics.update(["resetRestoresVisibility":model.visible && panel.isVisible])
-        let originalFrame=panel.frame,originalFont=model.fontSize,originalSource=model.showSource
-        panel.setContentSize(NSSize(width:400,height:300));model.fontSize=30;model.showSource=true
-        try? await Task.sleep(for:.milliseconds(300))
-        TestDiagnostics.snapshot(panel,"05-narrow-large-bilingual")
-        panel.setFrame(originalFrame,display:true);model.fontSize=originalFont;model.showSource=originalSource
-        async let pausing:Void=model.stop(paused:true)
-        try? await Task.sleep(for:.milliseconds(20))
-        let quitFlush=await model.finishForQuit()
-        await pausing
-        TestDiagnostics.update(["concurrentPauseAndQuitFlush":quitFlush && model.phase == .idle && !model.hasMeeting])
-        TestDiagnostics.update(["stopped":model.phase == .idle,"stopResourcesReleased":model.resourcesReleased,"panelHiddenAfterStop":!panel.isVisible,"archiveContainsBothRuns":model.captions.segments.filter{$0.translationFinal}.count>=8,"archiveExists":model.archiveURL.map{FileManager.default.fileExists(atPath:$0.path)} ?? false])
-        model.start()
-        try? await Task.sleep(for:.milliseconds(50))
-        await model.stop()
-        try? await Task.sleep(for:.milliseconds(500))
-        TestDiagnostics.update(["cancelResourcesReleased":model.resourcesReleased,"cancelled":model.phase == .idle,"stage":"completed"])
-        showPopover()
-    }
-    private func waitForLive() async->Bool{
-        for _ in 0..<150{
-            if model.phase == .live{return true}
-            if model.phase == .failed{TestDiagnostics.update(["stage":"failed","error":model.notice]);showPopover();return false}
-            try? await Task.sleep(for:.milliseconds(200))
-        }
-        TestDiagnostics.update(["stage":"timeout","error":model.notice]);await model.stop();return false
-    }
-    private func collectSample(marker:String,prefix:String) async {
-        guard let directory=TestDiagnostics.directory else{return}
-        var snapshotCount=0;var last="";var markerSeen:Date?
-        for _ in 0..<225{
-            if model.phase != .live{TestDiagnostics.update(["stage":"failed","error":model.notice]);return}
-            if model.captions.isFinal,!model.captions.translation.isEmpty,model.captions.translation != last{
-                last=model.captions.translation;snapshotCount+=1
-                TestDiagnostics.snapshot(panel,"\(prefix)-sentence-\(snapshotCount)")
-            }
-            if markerSeen==nil,FileManager.default.fileExists(atPath:directory.appendingPathComponent(marker).path){markerSeen=Date()}
-            if let markerSeen,Date().timeIntervalSince(markerSeen)>6{break}
-            try? await Task.sleep(for:.milliseconds(200))
-        }
-        guard markerSeen != nil,snapshotCount>0,model.sentFrames>0 else{
-            TestDiagnostics.update(["stage":"failed","error":"Fixture did not complete or produced no final translation"])
-            await model.stop();return
-        }
-        TestDiagnostics.snapshot(panel,"\(prefix)-final")
-    }
     func applicationShouldTerminate(_ sender:NSApplication)->NSApplication.TerminateReply {
         guard !terminating else{return .terminateNow};terminating=true
         Task{let saved=await model.finishForQuit();if !saved{terminating=false;showPopover()};NSApp.reply(toApplicationShouldTerminate:saved)};return .terminateLater

@@ -1,6 +1,6 @@
 import Foundation
 
-public actor ASTClient {
+public actor ASTClient:AudioSending {
     public nonisolated let events: AsyncThrowingStream<ASTEvent, Error>
     private let continuation: AsyncThrowingStream<ASTEvent, Error>.Continuation
     private var socket: URLSessionWebSocketTask?

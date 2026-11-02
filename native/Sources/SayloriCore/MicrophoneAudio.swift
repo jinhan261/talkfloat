@@ -39,14 +39,15 @@ public final class MicrophoneAudio: @unchecked Sendable {
         var address=AudioObjectPropertyAddress(mSelector:kAudioHardwarePropertyDefaultInputDevice,mScope:kAudioObjectPropertyScopeGlobal,mElement:kAudioObjectPropertyElementMain)
         var device=AudioDeviceID(0);var size=UInt32(MemoryLayout<AudioDeviceID>.size)
         guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject),&address,0,nil,&size,&device)==noErr,device != 0 else{return "未找到输入设备"}
-        address.mSelector=kAudioObjectPropertyName;var name:CFString="麦克风" as CFString;size=UInt32(MemoryLayout<CFString>.size)
-        _ = AudioObjectGetPropertyData(device,&address,0,nil,&size,&name)
-        return name as String
+        address.mSelector=kAudioObjectPropertyName
+        var name:Unmanaged<CFString>?;size=UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+        guard AudioObjectGetPropertyData(device,&address,0,nil,&size,&name)==noErr else{return "麦克风"}
+        return name?.takeRetainedValue() as String? ?? "麦克风"
     }
     public func start() async throws {
         let allowed=await AVCaptureDevice.requestAccess(for:.audio)
         guard allowed else{throw SayError.message("麦克风未获授权；请在系统设置 → 隐私与安全 → 麦克风中允许 Saylori。系统声音仍可翻译。")}
-        try await withCheckedThrowingContinuation{(c:CheckedContinuation<Void,Error>) in queue.async{
+        try await withCheckedThrowingContinuation{(c:CheckedContinuation<Void,Error>) in queue.async{[self] in
             do{
                 self.running=true;try self.configure()
                 let listener:AudioObjectPropertyListenerBlock={[weak self] _,_ in
@@ -91,7 +92,7 @@ public final class MicrophoneAudio: @unchecked Sendable {
         let mt=DispatchSource.makeTimerSource(queue:modeQueue);modeTimer=mt
         mt.schedule(deadline:.now(),repeating:.seconds(1))
         mt.setEventHandler{modeCallback?(AVCaptureDevice.activeMicrophoneMode.rawValue)};mt.resume()
-        observer=NotificationCenter.default.addObserver(forName:.AVAudioEngineConfigurationChange,object:e,queue:nil){[weak self] _ in
+        observer=NotificationCenter.default.addObserver(forName:.AVAudioEngineConfigurationChange,object:e,queue:nil){[weak self,weak e] _ in
             self?.queue.async{[weak self,weak e] in
                 guard let self,self.running,self.engine === e else{return}
                 self.restart()
