@@ -46,7 +46,7 @@ public final class MicrophoneAudio: @unchecked Sendable {
     }
     public func start() async throws {
         let allowed=await AVCaptureDevice.requestAccess(for:.audio)
-        guard allowed else{throw SayError.message("麦克风未获授权；请在系统设置 → 隐私与安全 → 麦克风中允许 Saylori。系统声音仍可翻译。")}
+        guard allowed else{throw SayError.message("麦克风未获授权；请在系统设置 → 隐私与安全 → 麦克风中允许 TalkFloat。系统声音仍可翻译。")}
         try await withCheckedThrowingContinuation{(c:CheckedContinuation<Void,Error>) in queue.async{[self] in
             do{
                 self.running=true;try self.configure()

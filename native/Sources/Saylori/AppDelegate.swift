@@ -16,16 +16,16 @@ import SayloriCore
         if CommandLine.arguments.contains("--dark-appearance"){NSApp.appearance=NSAppearance(named:.darkAqua)}
         installMainMenu()
         status=NSStatusBar.system.statusItem(withLength:NSStatusItem.variableLength)
-        status.button?.image=NSImage(systemSymbolName:"bird.fill",accessibilityDescription:"Saylori 实时翻译")
+        status.button?.image=TalkFloatArtwork.menuImage()
         status.button?.target=self;status.button?.action=#selector(togglePopover)
-        status.button?.toolTip="Saylori · 英语实时翻译"
+        status.button?.toolTip="TalkFloat · 英语实时翻译"
         // UI inspection can pin this transient surface without changing ordinary launches.
         popover.behavior = CommandLine.arguments.contains("--pin-test-popover") ? .applicationDefined:.transient
         let appearanceOverride:ColorScheme?=CommandLine.arguments.contains("--dark-appearance") ? .dark:nil
         popover.contentViewController=NSHostingController(rootView:PanelView(model:model).preferredColorScheme(appearanceOverride))
         popover.contentSize=NSSize(width:Brand.width,height:400)
         panel=SubtitlePanel(contentRect:NSRect(x:0,y:0,width:720,height:340),styleMask:[.borderless,.nonactivatingPanel,.resizable],backing:.buffered,defer:false)
-        panel.title="Saylori 字幕";panel.level = .floating;panel.isFloatingPanel=true
+        panel.title="TalkFloat 字幕";panel.level = .floating;panel.isFloatingPanel=true
         panel.collectionBehavior=[.canJoinAllSpaces,.fullScreenAuxiliary]
         panel.isMovableByWindowBackground=true;panel.backgroundColor = .clear;panel.isOpaque=false;panel.hasShadow=true
         panel.minSize=NSSize(width:400,height:300);panel.maxSize=NSSize(width:1600,height:1100)
@@ -49,8 +49,8 @@ import SayloriCore
             if locked{self?.panel.styleMask.remove(.resizable)}else{self?.panel.styleMask.insert(.resizable)}
         }
         model.$phase.sink{[weak self]phase in
-            self?.status.button?.contentTintColor=phase == .live ? NSColor.controlAccentColor:nil
-            self?.status.button?.toolTip="Saylori · \(phase.rawValue)"
+            self?.status.button?.contentTintColor=phase == .live ? Brand.accentNS:nil
+            self?.status.button?.toolTip="TalkFloat · \(phase.rawValue)"
         }.store(in:&subscriptions)
         model.$showSource.dropFirst().sink{[weak self]show in
             guard let self,show,self.panel.frame.height<168 else{return}
@@ -77,8 +77,10 @@ import SayloriCore
     private func installMainMenu(){
         let menu=NSMenu()
         let appItem=NSMenuItem();menu.addItem(appItem)
-        let appMenu=NSMenu(title:"Saylori");appItem.submenu=appMenu
-        appMenu.addItem(withTitle:"退出 Saylori",action:#selector(NSApplication.terminate(_:)),keyEquivalent:"q")
+        let appMenu=NSMenu(title:"TalkFloat");appItem.submenu=appMenu
+        appMenu.addItem(withTitle:"关于 TalkFloat",action:#selector(NSApplication.orderFrontStandardAboutPanel(_:)),keyEquivalent:"")
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle:"退出 TalkFloat",action:#selector(NSApplication.terminate(_:)),keyEquivalent:"q")
         let editItem=NSMenuItem();menu.addItem(editItem)
         let edit=NSMenu(title:"编辑");editItem.submenu=edit
         for (title,selector,key) in [("撤销","undo:","z"),("剪切","cut:","x"),("复制","copy:","c"),("粘贴","paste:","v"),("全选","selectAll:","a")]{

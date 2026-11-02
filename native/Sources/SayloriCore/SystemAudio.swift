@@ -54,7 +54,7 @@ public final class SystemAudio:NSObject, SCStreamOutput, SCStreamDelegate, @unch
             stop()
             let ns=error as NSError
             if ns.domain==SCStreamErrorDomain && ns.code == -3801 {
-                throw SayError.message("macOS 未允许当前安装版本采集声音（-3801）。如果录屏与系统录音开关已开启，可能仍对应旧版签名；请退出 Saylori，在系统设置中重新授权当前版本后打开。")
+                throw SayError.message("macOS 未允许当前安装版本采集声音（-3801）。如果录屏与系统录音开关已开启，可能仍对应旧版签名；请退出 TalkFloat，在系统设置中重新授权当前版本后打开。")
             };throw error
         }
     }

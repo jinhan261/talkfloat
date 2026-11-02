@@ -6,8 +6,15 @@ enum Brand {
     static let width:CGFloat=336
     static let inset:CGFloat=16
     static let radius:CGFloat=12
-    static let accent=Color.blue
-    static let mark=Color(red:0.69,green:0.39,blue:0.27)
+    // Dark teal keeps white primary-button labels readable in either appearance.
+    static let action=Color(red:34/255,green:121/255,blue:106/255)
+    static let accentNS=NSColor(name:nil){appearance in
+        appearance.bestMatch(from:[.darkAqua,.aqua]) == .darkAqua
+            ? NSColor(srgbRed:0.40,green:0.80,blue:0.71,alpha:1)
+            : NSColor(srgbRed:34/255,green:121/255,blue:106/255,alpha:1)
+    }
+    static let accent=Color(nsColor:accentNS)
+    static let mark=accent
     static func neutral(_ light:CGFloat,_ dark:CGFloat)->Color {
         Color(nsColor:NSColor(name:nil){$0.bestMatch(from:[.darkAqua,.aqua]) == .darkAqua ? NSColor(white:dark,alpha:1):NSColor(white:light,alpha:1)})
     }
@@ -65,7 +72,7 @@ struct PanelActionStyle:ButtonStyle {
     func makeBody(configuration:Configuration)->some View {
         configuration.label.font(.system(size:12.5,weight:.semibold)).frame(minHeight:38)
             .foregroundStyle(primary ? Color.white:Color.primary)
-            .background(primary ? Brand.accent:Brand.card,in:RoundedRectangle(cornerRadius:10,style:.continuous))
+            .background(primary ? Brand.action:Brand.card,in:RoundedRectangle(cornerRadius:10,style:.continuous))
             .overlay(RoundedRectangle(cornerRadius:10,style:.continuous).strokeBorder(primary ? .clear:Brand.border,lineWidth:0.5))
             .overlay(RoundedRectangle(cornerRadius:10).fill(Color.black.opacity(configuration.isPressed ? 0.10:0)))
             .opacity(enabled ? 1:0.45).contentShape(RoundedRectangle(cornerRadius:10))

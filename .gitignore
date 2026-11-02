@@ -1,6 +1,7 @@
 # Local build products and platform state
 .DS_Store
 .build-saylori*/
+.build-talkfloat*/
 native/.build/
 native/.swiftpm/
 dist/
@@ -23,6 +24,7 @@ __pycache__/
 !/docs/architecture.md
 !/docs/development.md
 !/docs/code-review.md
+!/docs/distribution.md
 /recordings/
 /artifacts/
 *.log

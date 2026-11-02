@@ -114,7 +114,7 @@ struct CaptionView:View {
     }
     private func originTint(_ origin:AudioOrigin)->Color {
         if origin == .microphone{return model.captionStyle == .light ? Color(red:0.69,green:0.35,blue:0.13):Color(red:0.98,green:0.70,blue:0.42)}
-        return model.captionStyle == .light ? Color(red:0.12,green:0.40,blue:0.79):Color(red:0.49,green:0.70,blue:1)
+        return model.captionStyle == .light ? Brand.action:Color(red:0.40,green:0.80,blue:0.71)
     }
     private func contextRow(english:String,chinese:String,pending:Bool,origin:AudioOrigin)->some View {
         HStack(alignment:.top,spacing:10){

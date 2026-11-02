@@ -3,32 +3,32 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>Saylori</string>
+	<string>TalkFloat</string>
 	<key>CFBundleExecutable</key>
-	<string>Saylori</string>
+	<string>TalkFloat</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>app.saylori.mac</string>
 	<key>CFBundleName</key>
-	<string>Saylori</string>
+	<string>TalkFloat</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.7.1</string>
+	<string>0.8.0</string>
 	<key>CFBundleVersion</key>
-	<string>30</string>
+	<string>31</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.2</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAudioCaptureUsageDescription</key>
-	<string>Saylori 需要收听所选应用的声音，将英语实时翻译为中文字幕。不会保存录音。</string>
+	<string>TalkFloat 需要收听所选应用的声音，将英语实时翻译为中文字幕。不会保存录音。</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Saylori 收听你选择的麦克风，将你的英语发言转为中英字幕并保存文字；不保存录音。</string>
+	<string>TalkFloat 收听你选择的麦克风，将你的英语发言转为中英字幕并保存文字；不保存录音。</string>
 	<key>NSScreenCaptureUsageDescription</key>
-	<string>Saylori 使用系统采集接口收听会议声音，生成实时字幕；不接收屏幕画面，也不保存录音。</string>
+	<string>TalkFloat 使用系统采集接口收听会议声音，生成实时字幕；不接收屏幕画面，也不保存录音。</string>
 </dict>
 </plist>

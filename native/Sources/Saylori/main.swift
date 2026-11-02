@@ -1,7 +1,7 @@
 import AppKit
 // AppKit owns the menu-bar lifecycle; every product view is native SwiftUI.
 // No WindowGroup or Settings scene is created, so launch never opens an empty window.
-@main @MainActor struct SayloriApp {
+@main @MainActor struct TalkFloatApp {
     static func main(){
         if let index=CommandLine.arguments.firstIndex(of:"--render-design"),CommandLine.arguments.count>index+1 {
             _ = NSApplication.shared

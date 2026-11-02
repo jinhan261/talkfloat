@@ -1,6 +1,8 @@
-# Saylori
+# TalkFloat
 
 Swift + SwiftUI / AppKit 原生 macOS 菜单栏英中实时翻译工具。支持所有系统声音或 Chrome，另一路收听当前系统麦克风；可切换 Apple 本地免费模式与豆包云端模式；大字当前字幕、可拖动与八方向缩放的前文窗口、本地中英文字档案。
+
+现名 TalkFloat，原名 Saylori。0.8.0 起采用青绿双行对话标志；应用身份和旧存档目录保持兼容。
 
 ## 运行与构建
 
@@ -10,12 +12,12 @@ Swift + SwiftUI / AppKit 原生 macOS 菜单栏英中实时翻译工具。支持
 - 授予系统音频和麦克风权限；凭据、录音和真实会议记录均不进入源码仓库。
 
 ```sh
-swift test --package-path native --scratch-path .build-saylori
+swift test --package-path native --scratch-path .build-talkfloat
 scripts/build-app.sh
-open dist/Saylori.app
+open dist/TalkFloat.app
 ```
 
-打包脚本使用本机 Apple Development 签名，或显式设置 `SAYLORI_SIGN_IDENTITY`。为保持录音授权与钥匙串身份稳定，不会偷偷退回临时签名。没有证书时仍可用 `swift build --package-path native --scratch-path .build-saylori` 检查编译。
+打包脚本使用本机 Apple Development 签名，或显式设置 `TALKFLOAT_SIGN_IDENTITY`。为保持录音授权与钥匙串身份稳定，不会偷偷退回临时签名。没有证书时仍可用 `swift build --package-path native --scratch-path .build-talkfloat` 检查编译。
 
 ## 当前行为与限制
 
@@ -33,5 +35,10 @@ open dist/Saylori.app
 - [架构与数据流](docs/architecture.md)
 - [构建、验证与提交检查](docs/development.md)
 - [本轮代码审查与优化](docs/code-review.md)
+- [开源、Homebrew 与 Mac App Store 发布方案](docs/distribution.md)
 
 SpeexDSP 代码及其 BSD 许可证位于 `native/Sources/SpeexDSP/`，来源及版本见 `ORIGIN.md`。应用代码尚未指定开源许可证。
+
+## 分发状态
+
+当前仍是私有仓库、本机开发签名试用版；没有公开 Release 或 Homebrew Cask，也未提交 Mac App Store。普通用户的一键安装需先完成 Developer ID 签名、公证与发布。开源许可证尚待作者选择。

@@ -62,7 +62,7 @@ public final class CoreAudioTap: @unchecked Sendable {
         func wait() throws {
             _ = semaphore.wait(timeout:.now()+12)
             lock.lock();defer{lock.unlock()}
-            if result==nil{result = .failure(SayError.message("系统采音启动超时。请允许 Saylori 的系统音频录制权限后重试。"))}
+            if result==nil{result = .failure(SayError.message("系统采音启动超时。请允许 TalkFloat 的系统音频录制权限后重试。"))}
             try result!.get()
         }
     }
@@ -84,7 +84,7 @@ public final class CoreAudioTap: @unchecked Sendable {
             throw SayError.message("\(source.name)还没有可捕获的音频进程。请先在该应用播放声音，或选择所有系统声音。")
         }
         let desc = source.id == "system" ? CATapDescription(stereoGlobalTapButExcludeProcesses: own) : CATapDescription(stereoMixdownOfProcesses: selected)
-        desc.name="Saylori System Audio"; desc.uuid=UUID(); desc.isPrivate=true; desc.muteBehavior = .unmuted
+        desc.name="TalkFloat System Audio"; desc.uuid=UUID(); desc.isPrivate=true; desc.muteBehavior = .unmuted
         if #available(macOS 26, *), source.id != "system" {
             desc.bundleIDs=Array(Set(selected.map(Self.bundleID))); desc.isProcessRestoreEnabled=true
         }
@@ -110,7 +110,7 @@ public final class CoreAudioTap: @unchecked Sendable {
         try Self.check(AudioObjectGetPropertyData(outputDevice,&uidAddress,0,nil,&uidSize,&outputUID),"读取设备标识")
         guard let uid=outputUID?.takeRetainedValue() as String? else{throw SayError.message("未找到声音输出设备")}
         let config:[String:Any]=[
-            kAudioAggregateDeviceNameKey:"Saylori Private Capture",
+            kAudioAggregateDeviceNameKey:"TalkFloat Private Capture",
             kAudioAggregateDeviceUIDKey:"app.saylori.capture.\(UUID().uuidString)",
             kAudioAggregateDeviceIsPrivateKey:true,
             kAudioAggregateDeviceIsStackedKey:true,

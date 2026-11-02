@@ -77,11 +77,11 @@ struct PanelView:View {
                 PanelIcon(icon:"chevron.left",label:"返回"){model.showingSettings=false}
                 Text("设置").font(.system(size:14,weight:.semibold));Spacer()
             }else{
-                Image(systemName:"bird.fill").font(.system(size:16)).foregroundStyle(Brand.mark)
-                Text("Saylori").font(.system(size:14,weight:.semibold))
+                TalkFloatMark().fill(Brand.mark).frame(width:22,height:18).accessibilityHidden(true)
+                Text("TalkFloat").font(.system(size:14,weight:.semibold,design:.rounded))
                 Spacer()
                 HStack(spacing:5){
-                    Circle().fill(model.phase == .live ? Color.green:(model.phase == .failed ? Color.red:Color.secondary.opacity(0.5))).frame(width:4,height:4)
+                    Circle().fill(model.phase == .live ? Brand.accent:(model.phase == .failed ? Color.red:Color.secondary.opacity(0.5))).frame(width:4,height:4)
                     Text(stateText).font(.system(size:10.5)).foregroundStyle(.secondary)
                 }.accessibilityElement(children:.combine)
                 PanelIcon(icon:"gearshape",label:"设置"){model.showingSettings=true}
@@ -126,7 +126,9 @@ struct PanelView:View {
                 if model.archiveURL != nil{Button("查看最近记录"){model.revealLatestArchive()}}
                 Button("设置"){model.showingSettings=true}
                 Divider()
-                Button("退出 Saylori"){NSApp.terminate(nil)}
+                Button("关于 TalkFloat"){NSApp.orderFrontStandardAboutPanel(nil)}
+                Divider()
+                Button("退出 TalkFloat"){NSApp.terminate(nil)}
             }label:{Image(systemName:"ellipsis").font(.system(size:13,weight:.semibold)).frame(width:24,height:28)}
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().foregroundStyle(.secondary).help("更多").accessibilityLabel("更多")
         }

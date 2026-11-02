@@ -5,7 +5,7 @@ from pathlib import Path
 root=Path(__file__).resolve().parent.parent
 out=Path(sys.argv[1]).resolve()
 out.mkdir(parents=True,exist_ok=True)
-app=Path.home()/'Applications/Saylori.app'
+app=Path.home()/'Applications/TalkFloat.app'
 args=['--self-test',str(out)]
 args.append('--pin-test-popover')
 if '--engine' in sys.argv:args.extend(['--engine',sys.argv[sys.argv.index('--engine')+1]])
@@ -17,7 +17,7 @@ pid=None
 for _ in range(50):
  for line in subprocess.check_output(['/bin/ps','-axo','pid=,command='],text=True).splitlines():
   number,_,command=line.strip().partition(' ')
-  if command.startswith(str(app/'Contents/MacOS/Saylori')) and str(out) in command:pid=int(number);break
+  if command.startswith(str(app/'Contents/MacOS/TalkFloat')) and str(out) in command:pid=int(number);break
  if pid is not None:break
  time.sleep(.1)
 if pid is None:raise RuntimeError('App process not found')

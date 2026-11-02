@@ -21,7 +21,7 @@ import SayloriCore
         }catch{print(error.localizedDescription);exit(1)}
         return
     }
-    print("Saylori native diagnostics")
+    print("TalkFloat native diagnostics")
     print("Audio processes: \(CoreAudioTap.processIDs().count)")
     print("Stored credentials: \((try? Keychain.load())?.isValid == true ? "configured":"not configured")")
     if CommandLine.arguments.contains("--connection"),let credentials=try? Keychain.load(){

@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import PurePosixPath
 
-ALLOWED_DOCS = {"docs/architecture.md", "docs/development.md", "docs/code-review.md"}
+ALLOWED_DOCS = {"docs/architecture.md", "docs/development.md", "docs/code-review.md", "docs/distribution.md"}
 ALLOWED_ROOTS = {"native", "scripts", ".github"}
 ALLOWED_FILES = {"README.md", ".gitignore"}
 PATTERNS = {
