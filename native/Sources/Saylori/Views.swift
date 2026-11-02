@@ -5,7 +5,7 @@ import SayloriCore
 struct PanelView:View {
     @ObservedObject var model:SessionModel
     private var stateText:String {
-        if !model.configured && model.phase == .idle{return "未连接"}
+        if !model.canStart && model.phase == .idle{return "未连接"}
         return model.phase == .idle ? "就绪":model.phase.rawValue
     }
     var body:some View {
@@ -20,6 +20,13 @@ struct PanelView:View {
                     Text("实时字幕").font(.system(size:10.5)).foregroundStyle(.secondary)
                 }.font(.system(size:13,weight:.medium)).padding(.horizontal,2)
                     .accessibilityElement(children:.combine)
+                VStack(alignment:.leading,spacing:7){
+                    ChoiceStrip(title:"翻译模式",options:[(TranslationMode.local,"本地免费"),(.doubao,"豆包云端")],selection:Binding(get:{model.mode},set:{model.setMode($0)}))
+                        .disabled(model.active || model.hasMeeting)
+                        .help(model.active || model.hasMeeting ? "结束本次会议后可切换翻译模式":"本地免费，豆包按服务用量计费")
+                    Text(model.mode.detail).font(.system(size:10.5)).foregroundStyle(.secondary)
+                        .fixedSize(horizontal:false,vertical:true).padding(.horizontal,2)
+                }
                 VStack(spacing:0){
                     SourcePicker(model:model).disabled(model.active || model.hasMeeting)
                         .help(model.active || model.hasMeeting ? "结束本次会议后可切换音源":"选择收听的应用")
@@ -54,10 +61,10 @@ struct PanelView:View {
                 actions
                 if #available(macOS 26.4,*),!model.localModelsReady {
                     Button{model.preparingLocalModels=true;model.localModelNotice="正在准备本机语言模型…"}label:{
-                        Label(model.preparingLocalModels ? "正在准备语言模型…":"启用更快的中文预览",systemImage:"bolt")
+                        Label(model.preparingLocalModels ? "正在准备语言模型…":(model.mode == .local ? "准备本地语言模型":"启用更快的中文预览"),systemImage:"bolt")
                     }.buttonStyle(.plain).font(.system(size:11)).foregroundStyle(Brand.accent).disabled(model.preparingLocalModels || model.active)
                 }
-                if !model.localModelNotice.isEmpty && model.localModelNotice != "本机实时预览已就绪"{message(model.localModelNotice,error:false)}
+                if !model.localModelNotice.isEmpty && model.localModelNotice != "本地英语与中文模型已就绪"{message(model.localModelNotice,error:false)}
                 footer
                 if !model.archiveError.isEmpty{message(model.archiveError,error:true);Button("重试保存"){Task{await model.retrySave()}}.disabled(model.active)}
             }
@@ -96,8 +103,8 @@ struct PanelView:View {
                 HStack{ProgressView().controlSize(.small);Text(model.phase == .stopping ? "正在保存会议记录…":"正在准备声音与字幕…");Spacer();if model.phase == .connecting{Button("取消"){Task{await model.stop()}}}}
                     .font(.system(size:12)).frame(height:38)
             }else{
-                Button{if model.configured{model.start()}else{model.showingSettings=true}}label:{
-                    Label(model.configured ? (model.phase == .paused ? "继续翻译":"开始翻译"):"设置翻译连接",systemImage:model.configured ? "play.fill":"link").frame(maxWidth:.infinity)
+                Button{if model.canStart{model.start()}else{model.showingSettings=true}}label:{
+                    Label(model.canStart ? (model.phase == .paused ? "继续翻译":"开始翻译"):"设置翻译连接",systemImage:model.canStart ? "play.fill":"link").frame(maxWidth:.infinity)
                 }.buttonStyle(PanelActionStyle(primary:true))
                 if model.phase == .paused{Button("结束并存档"){Task{await model.stop()}}.buttonStyle(.plain).font(.system(size:11))}
             }
@@ -143,7 +150,7 @@ struct SettingsView:View {
                 }.padding(1)
             }.scrollIndicators(.automatic)
         }.frame(height:min(section==0 ? 454:480,(NSScreen.main?.visibleFrame.height ?? 800)-110))
-            .onAppear{if !model.configured{section=1}}
+            .onAppear{if !model.canStart{section=1}}
     }
     private var appearance:some View {
         VStack(alignment:.leading,spacing:16){

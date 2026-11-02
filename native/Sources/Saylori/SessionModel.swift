@@ -6,6 +6,11 @@ import Combine
 @MainActor final class SessionModel: ObservableObject {
     enum Phase: String {case idle="准备好了",checking="正在检测声音",connecting="正在连接",live="正在翻译",paused="已暂停",stopping="正在收尾",failed="翻译已停止"}
     @Published var phase:Phase = .idle {didSet{TestDiagnostics.update(["phase":phase.rawValue]);TestDiagnostics.record("phase",["value":phase.rawValue])}}
+    @Published var mode=TranslationMode(rawValue:UserDefaults.standard.string(forKey:"translationMode") ?? "local") ?? .local {
+        didSet{savePreference(mode.rawValue,forKey:"translationMode")}
+    }
+    var canStart:Bool{!mode.requiresCredentials || configured}
+    func setMode(_ value:TranslationMode){guard !active,!hasMeeting else{return};mode=value;notice="";localModelNotice=""}
     @Published var source=AudioSource.system {didSet{savePreference(source.id,forKey:"sourceID")}}
     @Published var sources:[AudioSource]=[.system,.chrome]
     @Published var captions=CaptionState()
@@ -18,7 +23,12 @@ import Combine
     private var streamClocks:[String:Date]=[:]
     private var fastSystem:AnyObject?
     private var fastMicrophone:AnyObject?
-    var displayCaptions:[CaptionSegment]{CaptionPresentation.live(cloud:captions.recentSegments(limit:64),drafts:previewDrafts)}
+    private var localTranslations:[UUID:CaptionSegment]=[:]
+    var displayCaptions:[CaptionSegment]{
+        let recent=captions.recentSegments(limit:64)
+        let readable=mode == .local ? recent.map{CaptionPresentation.keepingReadableTranslation($0,previous:localTranslations[$0.id])}:recent
+        return CaptionPresentation.live(cloud:readable,drafts:previewDrafts)
+    }
     var displayCurrent:CaptionSegment?{displayCaptions.last}
     var displayContext:[CaptionSegment]{Array(displayCaptions.dropLast().suffix(24))}
     @Published var notice=""
@@ -75,7 +85,7 @@ import Combine
     private var microphoneGeneration=UUID()
     private var reconnects=0
     private var capture:SystemAudio?
-    private var client:ASTClient?
+    private var client:(any TranslationEngine)?
     private var sender:Task<Void,Error>?
     private var receiver:Task<Void,Never>?
     private var operation:Task<Void,Never>?
@@ -133,16 +143,26 @@ import Combine
     func start(){
         guard !active else{return}
         guard meeting?.endedAt == nil else{notice="请先重试保存上一次记录";return}
-        guard configured else{notice="请在设置中连接豆包同传";return}
+        guard canStart else{notice="请在设置中连接豆包同传";return}
+        if mode == .local {
+            guard #available(macOS 26.4,*) else{notice="本地免费模式需要 macOS 26.4 或更新版本；可手动切换豆包。";return}
+            if !localModelsReady{notice="请先准备本地英语与中文模型";return}
+        }
         previewing=false
-        if meeting==nil { reconnects=0;streamClocks=[:];meeting=MeetingRecord(sourceName:source.name + "；麦克风按片段标注");hasMeeting=true;captions=CaptionState();previewDrafts=[];archiveError="" }
+        if meeting==nil { reconnects=0;streamClocks=[:];meeting=MeetingRecord(sourceName:source.name + "；麦克风按片段标注");meeting?.engine=mode;hasMeeting=true;captions=CaptionState();previewDrafts=[];localTranslations=[:];archiveError="" }
         savePreference(source.id,forKey:"sourceID")
         let token=UUID();generation=token;notice="";phase = .connecting;level=0;sentFrames=0;receivedEvents=0
         operation=Task{[weak self] in await self?.connect(token)}
     }
+    private func makeEngine(origin:AudioOrigin)throws->any TranslationEngine {
+        if mode == .doubao{return DoubaoEngine()}
+        if #available(macOS 26.4,*){return AppleTranslationEngine(origin:origin)}
+        throw SayError.message("本地免费模式需要 macOS 26.4 或更新版本；可手动切换豆包。")
+    }
     private func connect(_ token:UUID) async {
-        let audio=SystemAudio();let service=ASTClient();capture=audio;client=service;captions.beginStream(service.sessionID)
+        let audio=SystemAudio();capture=audio
         do{
+            let service=try makeEngine(origin:.system);client=service;captions.beginStream(service.sessionID)
             let preview=await makeFastPreview(sessionID:service.sessionID,origin:.system)
             guard token==generation,!Task.isCancelled else{if #available(macOS 26.4,*),let preview=preview as? FastPreview{await preview.stop()};return}
             fastSystem=preview
@@ -168,8 +188,8 @@ import Combine
                 }
             }
             TestDiagnostics.record("connection-start")
-            try await service.connect(credentials)
-            TestDiagnostics.record("connection-ready",["session":service.sessionID,"origin":"system"])
+            try await service.start(credentials)
+            TestDiagnostics.record("connection-ready",["session":service.sessionID,"origin":"system","engine":mode.rawValue])
             guard token==generation,!Task.isCancelled else{audio.stop();await service.abort();return}
             await relay.enable()
             if var interruptions=meeting?.interruptions,let i=interruptions.lastIndex(where:{$0.origin == .system && $0.endedAt==nil}){
@@ -178,14 +198,9 @@ import Combine
             }
             phase = .live;visible=true;onVisibility?(true);onLive?();if microphoneEnabled{beginMicrophone(token)}
             receiver=Task{[weak self] in
-                do{for try await event in service.events{
+                do{for try await update in service.updates{
                     guard let self,self.generation==token else{return}
-                    self.receivedEvents += 1
-                    TestDiagnostics.record("event",["origin":"system","session":service.sessionID,"type":event.type,"text":event.text,"status":event.status,"message":event.message,"startMS":event.start,"endMS":event.end,"receivedUptime":event.receivedAt,"displayLagMS":(ProcessInfo.processInfo.systemUptime-event.receivedAt)*1000])
-                    self.captions.apply(event,streamID:service.sessionID)
-                    self.tracePresentation()
-                    if (650...655).contains(event.type){self.scheduleSave()}
-                    if event.type==250{self.level=0}
+                    self.consume(update,sessionID:service.sessionID,origin:.system)
                 }}catch{await self?.failed(error,token:token)}
             }
             let currentSender=sender
@@ -194,7 +209,7 @@ import Combine
     }
     private func failed(_ error:Error,token:UUID) async {
         guard generation==token,phase != .stopping else{return}
-        let recoverable=SayError.canRetry(error) && reconnects<2
+        let recoverable=mode == .doubao && SayError.canRetry(error) && reconnects<2
         generation=UUID();capture?.stop();capture=nil;sender?.cancel();receiver?.cancel();sender=nil;receiver=nil
         if #available(macOS 26.4,*),let preview=fastSystem as? FastPreview{await preview.stop()};fastSystem=nil
         previewDrafts.removeAll{$0.audioOrigin == .system}
@@ -289,7 +304,9 @@ import Combine
         guard microphone==nil else{return}
         let micToken=UUID();microphoneGeneration=micToken
         let echoCanceller=self.echoCanceller
-        let route=MicrophoneRoute(processAudio:{echoCanceller.process($0)})
+        let service:any TranslationEngine
+        do{service=try makeEngine(origin:.microphone)}catch{microphoneNotice=error.localizedDescription;return}
+        let route=MicrophoneRoute(service:service,processAudio:{echoCanceller.process($0)})
         microphone=route;microphoneBusy=true;microphoneProcessingMode=nil
         route.nearSpeechGate.setEnabled(microphoneNearField)
         route.nearSpeechGate.setThresholdDB(microphoneThresholdDB)
@@ -316,14 +333,9 @@ import Combine
         route.onReady={[weak self] in guard let self,self.microphoneGeneration==micToken else{return};self.microphoneBusy=false;self.microphoneReady=true}
         let microphoneSession=route.service.sessionID
         route.onSent={[weak self] stats in self?.registerClock(stats,sessionID:microphoneSession)}
-        route.onEvent={[weak self] event in
+        route.onUpdate={[weak self] update in
             guard let self,self.microphoneGeneration==micToken else{return}
-            TestDiagnostics.record("event",["origin":"microphone","session":microphoneSession,"type":event.type,"text":event.text,"startMS":event.start,"endMS":event.end,"receivedUptime":event.receivedAt,"displayLagMS":(ProcessInfo.processInfo.systemUptime-event.receivedAt)*1000])
-            self.captions.apply(event,streamID:microphoneSession)
-            self.captions.classifyMicrophone(microphoneSession,using:self.weakPlaybackLeak)
-            self.captions.measurePlayback(microphoneSession,using:self.playbackConfidence)
-            self.tracePresentation()
-            if (650...655).contains(event.type){self.scheduleSave()}
+            self.consume(update,sessionID:microphoneSession,origin:.microphone)
         }
         route.onFailure={[weak self] message in
             guard let self,self.microphoneGeneration==micToken else{return}
@@ -351,6 +363,30 @@ import Combine
         previewDrafts.removeAll{$0.audioOrigin == .microphone}
         microphoneGeneration=UUID();microphone=nil;microphoneReady=false;microphoneLevel=0;microphoneBusy=false
     }
+    private func consume(_ update:TranslationUpdate,sessionID:String,origin:AudioOrigin){
+        receivedEvents += 1
+        switch update {
+        case .cloud(let event):
+            TestDiagnostics.record("event",["origin":origin.rawValue,"session":sessionID,"type":event.type,"text":event.text,"status":event.status,"message":event.message,"startMS":event.start,"endMS":event.end,"receivedUptime":event.receivedAt,"displayLagMS":(ProcessInfo.processInfo.systemUptime-event.receivedAt)*1000])
+            captions.apply(event,streamID:sessionID)
+            if origin == .system,event.type==250{level=0}
+        case .local(var item):
+            item.audioEpoch=streamClocks[sessionID]?.timeIntervalSince1970
+            item.weakPlaybackLeak=weakPlaybackLeak(item);item.playbackConfidence=playbackConfidence(item)
+            captions.upsertLocal(item)
+            if !item.translation.isEmpty,localTranslations[item.id]?.translationFinal != true || item.translationFinal {
+                localTranslations[item.id]=item
+                let visibleIDs=Set(captions.recentSegments(limit:64).map(\.id))
+                localTranslations=localTranslations.filter{visibleIDs.contains($0.key)}
+            }
+            TestDiagnostics.record("caption-update",["id":item.id.uuidString,"session":sessionID,"origin":origin.rawValue,"startMS":item.startMS,"endMS":item.endMS,"source":item.source,"text":item.translation,"sourceFinal":item.sourceFinal,"translationFinal":item.translationFinal,"uptime":ProcessInfo.processInfo.systemUptime])
+        }
+        if origin == .microphone {
+            captions.classifyMicrophone(sessionID,using:weakPlaybackLeak)
+            captions.measurePlayback(sessionID,using:playbackConfidence)
+        }
+        tracePresentation();scheduleSave()
+    }
     private func tracePresentation(){
         guard TestDiagnostics.directory != nil else{return}
         let visible=Array(displayCaptions.suffix(25))
@@ -358,6 +394,7 @@ import Combine
         TestDiagnostics.record("presentation",["micCandidates":mic,"count":visible.count,"currentOrigin":visible.last?.audioOrigin.rawValue ?? "none"])
     }
     private func makeFastPreview(sessionID:String,origin:AudioOrigin) async -> AnyObject? {
+        guard mode == .doubao,!CommandLine.arguments.contains("--no-cloud-preview") else{return nil}
         if #available(macOS 26.4,*){
             if !localModelsReady{localModelsReady=await FastPreview.available()}
             guard localModelsReady else{return nil}
@@ -368,7 +405,7 @@ import Combine
                 value.audioEpoch=self.streamClocks[sessionID]?.timeIntervalSince1970
                 value.weakPlaybackLeak=self.weakPlaybackLeak(value)
                 value.playbackConfidence=self.playbackConfidence(value)
-                if let i=self.previewDrafts.firstIndex(where:{$0.sessionID==sessionID && abs($0.startMS-item.startMS)<80}){
+                if let i=self.previewDrafts.firstIndex(where:{$0.id==item.id}){
                     value.id=self.previewDrafts[i].id;value.receivedAt=self.previewDrafts[i].receivedAt;self.previewDrafts[i]=value
                 }else{self.previewDrafts.append(value)}
                 self.previewDrafts=CaptionPresentation.latestDrafts(self.previewDrafts)
@@ -446,7 +483,7 @@ import Combine
                 }
             }
             audio.stop();guard generation==token else{return "检测已结束"};capture=nil;phase = .idle;level=0
-            let result=bytes>0 && peak>0.001 ? "已捕获\(source.name)，可以连接豆包翻译。" : "采音已启动，但未检测到声音。请播放一段英语后重试，并检查录制权限。"
+            let result=bytes>0 && peak>0.001 ? "已捕获\(source.name)，可以开始翻译。" : "采音已启动，但未检测到声音。请播放一段英语后重试，并检查录制权限。"
             if CommandLine.arguments.contains("--audio-check") {
                 let report:[String:Any]=["bytes":bytes,"peak":peak,"seconds":Double(bytes)/32000,"result":result]
                 if let data=try? JSONSerialization.data(withJSONObject:report,options:.prettyPrinted){try? data.write(to:URL(fileURLWithPath:NSTemporaryDirectory()).appendingPathComponent("saylori-audio-check.json"))}

@@ -1,6 +1,16 @@
 import Foundation
 
 public enum CaptionPresentation {
+    /// Keep the last translated pair readable while the next ASR revision is
+    /// being translated. The raw archive still retains the latest source state.
+    public static func keepingReadableTranslation(_ current:CaptionSegment,previous:CaptionSegment?)->CaptionSegment {
+        guard current.translation.isEmpty,let previous,previous.id==current.id,!previous.translation.isEmpty else{return current}
+        var result=previous
+        result.weakPlaybackLeak=current.weakPlaybackLeak;result.playbackConfidence=current.playbackConfidence
+        result.possibleEchoOf=current.possibleEchoOf
+        return result
+    }
+
     public static func latestDrafts(_ drafts:[CaptionSegment])->[CaptionSegment] {
         var latest:[String:CaptionSegment]=[:]
         for item in drafts {

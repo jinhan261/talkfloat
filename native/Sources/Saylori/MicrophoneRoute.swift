@@ -3,21 +3,22 @@ import SayloriCore
 
 @MainActor final class MicrophoneRoute {
     let audio=MicrophoneAudio()
-    let service=ASTClient()
+    let service:any TranslationEngine
     let nearSpeechGate=NearSpeechGate()
     private var sender:Task<Void,Error>?
     private var receiver:Task<Void,Never>?
     private var connection:Task<Void,Never>?
     private var ended=false
+    private var connected=false
     private var finishing:Task<Void,Never>?
-    var onEvent:((ASTEvent)->Void)?
+    var onUpdate:((TranslationUpdate)->Void)?
     var onReady:(()->Void)?
     var onFailure:((String)->Void)?
     var onSent:((AudioSendStats)->Void)?
     var onGate:((NearSpeechGate.Observation)->Void)?
     var onAudio:(@Sendable (Data,AudioSendStats)->Void)?
     private let processAudio:@Sendable (AudioPacket)->AudioPacket
-    init(processAudio:@escaping @Sendable (AudioPacket)->AudioPacket = {$0}){self.processAudio=processAudio}
+    init(service:any TranslationEngine,processAudio:@escaping @Sendable (AudioPacket)->AudioPacket = {$0}){self.service=service;self.processAudio=processAudio}
     func start(_ credentials:Credentials){
         connection=Task{[self] in
             do{
@@ -42,12 +43,12 @@ import SayloriCore
                         if let stats=try await relay.forward(cleaned){audioObserver?(cleaned.data,stats);await self?.sent(stats)}
                     }
                 }
-                try await service.connect(credentials)
+                try await service.start(credentials)
                 guard !ended else{await service.abort();return}
                 TestDiagnostics.record("connection-ready",["session":service.sessionID,"origin":"microphone"])
-                await relay.enable();onReady?()
+                await relay.enable();connected=true;onReady?()
                 receiver=Task{
-                    do{for try await event in service.events{self.onEvent?(event)}}
+                    do{for try await update in service.updates{self.onUpdate?(update)}}
                     catch{await self.fail(error)}
                 }
                 do{try await sender?.value}catch{await fail(error)}
@@ -71,7 +72,9 @@ import SayloriCore
             await audio.stop()
             let deadline=Task{try? await Task.sleep(for:.seconds(2));if !Task.isCancelled{await self.service.abort()}}
             _ = try? await sender?.value;deadline.cancel()
-            _ = await service.finish();await receiver?.value
+            let complete=await service.finish();await receiver?.value
+            if connected,!complete{onFailure?("麦克风声音最后一句可能尚未定稿；已收到内容已保留。")}
+            connected=false
             connection?.cancel();sender=nil;receiver=nil;connection=nil
         }
         finishing=task;await task.value

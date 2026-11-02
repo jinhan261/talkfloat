@@ -124,6 +124,15 @@ final class TranscriptTests:XCTestCase {
         let decoded=try JSONDecoder().decode(MeetingRecord.self,from:JSONEncoder().encode(record))
         XCTAssertEqual(decoded.interruptions?.count,1)
     }
+    func testEmptyCloudTranslationDoesNotClaimCompletedTranslation()throws {
+        var state=CaptionState();state.beginStream("empty-target")
+        try state.apply(e(650,"",100));try state.apply(e(652,"A recognized sentence.",100,1000))
+        try state.apply(e(653,"",100));try state.apply(e(655,"",100,1000))
+        XCTAssertEqual(state.current?.source,"A recognized sentence.")
+        XCTAssertEqual(state.current?.translation,"");XCTAssertFalse(state.current?.translationFinal ?? true)
+        var record=MeetingRecord(sourceName:"麦克风声音");record.segments=state.segments
+        XCTAssertTrue(record.markdown.contains("中文（未定稿）：未收到译文"))
+    }
     func testSilentFinalsCannotEraseCurrentCaptionOrPolluteArchive()throws {
         var state=CaptionState();state.beginStream("s")
         try state.apply(e(650));try state.apply(e(652,"Hello."));try state.apply(e(653));try state.apply(e(655,"你好。"))

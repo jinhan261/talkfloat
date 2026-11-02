@@ -35,6 +35,19 @@ public struct CaptionState: Sendable {
     public var isFinal: Bool { storage.last(where:{!$0.translation.isEmpty})?.translationFinal ?? false }
     public var previous: String { storage.reversed().lazy.filter{!$0.translation.isEmpty}.dropFirst().first?.translation ?? "" }
     public var context: [CaptionSegment] { Array(recentSegments(limit:4).dropLast()) }
+    /// Full local snapshots have stable IDs; a delayed draft cannot overwrite a final.
+    public mutating func upsertLocal(_ value:CaptionSegment){
+        guard !PreviewText.normalized(value.source+value.translation).isEmpty else{return}
+        var item=value;item.audioEpoch=streamClocks[item.sessionID]?.timeIntervalSince1970 ?? item.audioEpoch
+        if let i=storage.lastIndex(where:{$0.id==item.id}){
+            let old=storage[i]
+            guard !old.translationFinal || item.translationFinal else{return}
+            guard !old.sourceFinal || item.sourceFinal else{return}
+            item.receivedAt=old.receivedAt
+            if item.translation.isEmpty && item.source==old.source {item.translation=old.translation}
+            storage[i]=item
+        }else{storage.append(item)}
+    }
     public mutating func apply(_ event: ASTEvent, streamID:String? = nil) {
         guard (650...655).contains(event.type) else { return }
         let sid=streamID ?? (event.sessionID.isEmpty ? sessionID:event.sessionID)
@@ -61,7 +74,7 @@ public struct CaptionState: Sendable {
         case 654: storage[i].translation += event.text
         case 655:
             if !event.text.isEmpty { storage[i].translation=event.text }
-            storage[i].translationFinal=true; storage[i].endMS=max(storage[i].endMS,event.end)
+            storage[i].translationFinal = !storage[i].translation.isEmpty; storage[i].endMS=max(storage[i].endMS,event.end)
         default: break
         }
     }

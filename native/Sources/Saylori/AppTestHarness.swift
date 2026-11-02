@@ -51,15 +51,27 @@ import SayloriCore
         TestDiagnostics.update(["stage":"visual-ready","captionStyle":model.captionStyle.rawValue,"backgroundOpacity":model.backgroundOpacity,"visible":panel.isVisible])
         showPopover()
     }
+    private func prepareEngine() async -> Bool {
+        if let i=CommandLine.arguments.firstIndex(of:"--engine"),CommandLine.arguments.count>i+1,
+           let value=TranslationMode(rawValue:CommandLine.arguments[i+1]){model.setMode(value)}
+        for _ in 0..<300 {
+            if model.mode == .local ? model.localModelsReady:!model.access.working{break}
+            try? await Task.sleep(for:.milliseconds(200))
+        }
+        guard model.canStart,model.mode != .local || model.localModelsReady else{
+            TestDiagnostics.update(["stage":"failed","error":model.mode == .local ? "Local models unavailable":"Credentials unavailable"]);return false
+        }
+        TestDiagnostics.update(["engine":model.mode.rawValue]);return true
+    }
     func runMeetingTest() async {
         guard let directory=TestDiagnostics.directory else{return}
         TestDiagnostics.update(["stage":"credential-wait"])
-        for _ in 0..<300{if !model.access.working{break};try? await Task.sleep(for:.milliseconds(200))}
-        guard model.configured else{TestDiagnostics.update(["stage":"failed","error":"Credentials unavailable"]);return}
+        let oldMode=model.mode;defer{model.setMode(oldMode)}
+        guard await prepareEngine() else{return}
         let oldMic=model.microphoneEnabled
         let oldSource=model.source,savedFrame=panel.frame
         defer{restore(source:oldSource,microphone:oldMic,frame:savedFrame)}
-        model.source = .chrome
+        model.source = CommandLine.arguments.contains("--system-test") ? .system:.chrome
         model.microphoneEnabled=CommandLine.arguments.contains("--with-microphone")
         TestDiagnostics.update(["stage":"armed"])
         for _ in 0..<1800{
@@ -102,11 +114,8 @@ import SayloriCore
     }
     func runSelfTest() async {
         TestDiagnostics.update(["stage":"credential-wait"])
-        for _ in 0..<900{
-            if !model.access.working{break}
-            try? await Task.sleep(for:.milliseconds(200))
-        }
-        guard model.configured else{TestDiagnostics.update(["stage":"failed","error":"Credentials unavailable"]);return}
+        let oldMode=model.mode;defer{model.setMode(oldMode)}
+        guard await prepareEngine() else{return}
         TestDiagnostics.update(["stage":"starting","configured":model.configured,"credentialMode":model.credentials.legacy ? "App ID / Token":"API Key"])
         let oldSource=model.source,oldMic=model.microphoneEnabled,savedFrame=panel.frame
         defer{restore(source:oldSource,microphone:oldMic,frame:savedFrame)}
@@ -144,7 +153,7 @@ import SayloriCore
         let quitFlush=await model.finishForQuit()
         await pausing
         TestDiagnostics.update(["concurrentPauseAndQuitFlush":quitFlush && model.phase == .idle && !model.hasMeeting])
-        TestDiagnostics.update(["stopped":model.phase == .idle,"stopResourcesReleased":model.resourcesReleased,"panelHiddenAfterStop":!panel.isVisible,"archiveContainsBothRuns":model.captions.segments.filter{$0.translationFinal}.count>=8,"archiveExists":model.archiveURL.map{FileManager.default.fileExists(atPath:$0.path)} ?? false])
+        TestDiagnostics.update(["stopped":model.phase == .idle,"stopResourcesReleased":model.resourcesReleased,"panelHiddenAfterStop":!panel.isVisible,"archiveContainsBothRuns":Set(model.captions.segments.filter{$0.translationFinal}.map(\.sessionID)).count>=2,"archiveExists":model.archiveURL.map{FileManager.default.fileExists(atPath:$0.path)} ?? false])
         model.start()
         try? await Task.sleep(for:.milliseconds(50))
         await model.stop()

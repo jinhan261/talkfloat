@@ -23,7 +23,7 @@ struct CaptionView:View {
                         .foregroundStyle(originTint(current?.audioOrigin ?? .system))
                         .frame(width:24,height:24).background(ink.opacity(0.05),in:RoundedRectangle(cornerRadius:7))
                     Text(model.previewing ? "样式预览":(current?.audioOrigin.label ?? "英语 → 中文")).font(.system(size:11,weight:.medium))
-                    Text(model.phase == .connecting ? "系统声音重连中":(model.phase == .paused ? "已暂停":(current?.provisional == true ? "预览 · 待校正":(current?.translationFinal == false ? "实时生成":""))))
+                    Text(model.phase == .connecting ? "正在准备声音与字幕":(model.phase == .paused ? "已暂停":(current?.provisional == true ? (model.mode == .local ? "实时生成":"预览 · 待校正"):(current?.translationFinal == false ? "实时生成":""))))
                         .font(.system(size:10)).opacity(0.6)
                     Spacer(minLength:8)
                     Image(systemName:"ellipsis").font(.system(size:12,weight:.medium)).opacity(0.35)

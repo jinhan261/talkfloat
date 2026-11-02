@@ -16,7 +16,11 @@ import SayloriCore
             NSApp.appearance=NSAppearance(named:scheme == .dark ? .darkAqua:.aqua)
             model.microphoneReady=false;model.microphonePassing=false
             model.phase = .idle;model.showingSettings=false
+            model.mode = .local
             export(PanelView(model:model),name:"\(name)-menu",scheme:scheme,directory:directory)
+            model.mode = .doubao
+            export(PanelView(model:model),name:"\(name)-menu-doubao",scheme:scheme,directory:directory)
+            model.mode = .local
             export(SourcePicker(model:model).sourceList.padding(.top,8).background(Brand.card),name:"\(name)-sources",scheme:scheme,directory:directory)
             model.showingSettings=true
             export(PanelView(model:model),name:"\(name)-settings",scheme:scheme,directory:directory)
@@ -27,7 +31,7 @@ import SayloriCore
             export(PanelView(model:model),name:"\(name)-live",scheme:scheme,directory:directory)
             model.microphoneRMSDB = -22;model.microphonePassing=true
             export(PanelView(model:model),name:"\(name)-microphone-passing",scheme:scheme,directory:directory)
-            model.phase = .failed;model.notice="无法连接翻译服务，请检查网络后重试。"
+            model.phase = .failed;model.notice="本地语音识别已停止，请重新开始。"
             export(PanelView(model:model),name:"\(name)-error",scheme:scheme,directory:directory)
             model.notice="";model.phase = .paused
             export(PanelView(model:model),name:"\(name)-paused",scheme:scheme,directory:directory)

@@ -6,14 +6,23 @@ import json,pathlib,re,sys,difflib,collections
 out=pathlib.Path(sys.argv[1]);status=json.loads((out/'status.json').read_text())
 record=json.loads(pathlib.Path(status['archivePath']).with_suffix('.json').read_text())
 rows=[json.loads(x) for x in (out/'events.ndjson').read_text().splitlines()]
-audit={}
+audit={"engine":record.get("engine","doubao")}
 for origin in ['system','microphone']:
  segments=[s for s in record['segments'] if s.get('origin','system')==origin and (s['source'] or s['translation'])]
  source=[s['source'] for s in segments if s['sourceFinal']]
- target=[s['translation'] for s in segments if s['translationFinal']]
+ target=[s['translation'] for s in segments if s['translationFinal'] and s['translation']]
  sourceEvents=[e['text'] for e in rows if e.get('origin')==origin and e.get('type')==652 and e['text']]
  targetEvents=[e['text'] for e in rows if e.get('origin')==origin and e.get('type')==655 and e['text']]
- audit[origin]={'segments':len(segments),'sourceFinals':len(source),'targetFinals':len(target),'sourceEventsEqualArchive':source==sourceEvents,'translationEventsEqualArchive':target==targetEvents,'missingSource':sum(not s['source'] for s in segments),'missingTranslation':sum(not s['translation'] for s in segments),'partial':sum(not s['sourceFinal'] or not s['translationFinal'] for s in segments)}
+ if record.get('engine')=='local':
+  latestSource={};latestTarget={}
+  for event in rows:
+   if event.get('kind')!='caption-update' or event.get('origin')!=origin:continue
+   if event.get('sourceFinal'):latestSource[event['id']]=event['source']
+   if event.get('translationFinal'):latestTarget[event['id']]=event['text']
+  sourceEvents=latestSource;targetEvents=latestTarget
+  source={s['id']:s['source'] for s in segments if s['sourceFinal']}
+  target={s['id']:s['translation'] for s in segments if s['translationFinal']}
+ audit[origin]={'segments':len(segments),'sourceFinals':len(source),'targetFinals':len(target),'sourceEventsEqualArchive':source==sourceEvents,'translationEventsEqualArchive':target==targetEvents,'missingSource':sum(not s['source'] for s in segments),'missingTranslation':sum(not s['translation'] for s in segments),'partial':sum(not s['sourceFinal'] or not s['translationFinal'] or not s['translation'] for s in segments)}
 md=pathlib.Path(status['archivePath']).read_text()
 audit['emptyProtocolSegments']=sum(not s['source'] and not s['translation'] for s in record['segments'])
 normalize=lambda text: re.sub(r'\s+', ' ', text).strip()

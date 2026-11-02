@@ -15,6 +15,7 @@ public struct MeetingRecord: Codable, Sendable {
     public var startedAt = Date()
     public var endedAt: Date?
     public var status = "进行中"
+    public var engine:TranslationMode?
     public var sourceName: String
     public var segments: [CaptionSegment] = []
     public var pauses: [Date] = []
@@ -24,6 +25,7 @@ public struct MeetingRecord: Codable, Sendable {
     public var markdown: String {
         let formatter=DateFormatter(); formatter.dateFormat="yyyy-MM-dd HH:mm:ss"
         var rows=["# Saylori · 英中会议记录", "", "开始：\(formatter.string(from:startedAt))", "音源：\(sourceName)", "状态：\(status)", ""]
+        if let engine{rows += ["翻译模式：\(engine.title)", ""]}
         if let endedAt { rows += ["结束：\(formatter.string(from:endedAt))", ""] }
         rows += ["仅保存已收到的原文与译文，不保存录音。暂停期间不收听；未定稿内容保留并标注。", ""]
         for (i,s) in CaptionPresentation.sentences(segments.filter{$0.possibleEchoOf==nil && $0.weakPlaybackLeak != true}).enumerated() where !s.source.isEmpty || !s.translation.isEmpty {

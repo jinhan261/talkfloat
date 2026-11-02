@@ -8,6 +8,7 @@ out.mkdir(parents=True,exist_ok=True)
 app=Path.home()/'Applications/Saylori.app'
 args=['--self-test',str(out)]
 args.append('--pin-test-popover')
+if '--engine' in sys.argv:args.extend(['--engine',sys.argv[sys.argv.index('--engine')+1]])
 if '--dark' in sys.argv:args.append('--dark-appearance')
 if '--chrome' in sys.argv:args.append('--chrome-test')
 if '--with-microphone' in sys.argv:args.append('--with-microphone')

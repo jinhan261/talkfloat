@@ -13,7 +13,7 @@ struct LocalModelPreparation:ViewModifier {
                     _ = try await AssetInventory.reserve(locale:Locale(identifier:"en-US"))
                     if let request=try await AssetInventory.assetInstallationRequest(supporting:[speech]){try await request.downloadAndInstall()}
                     model.localModelsReady=await FastPreview.available()
-                    model.localModelNotice=model.localModelsReady ? "本机实时预览已就绪":"语言模型尚未准备好，请重试。"
+                    model.localModelNotice=model.localModelsReady ? "本地英语与中文模型已就绪":"语言模型尚未准备好，请重试。"
                 }catch{model.localModelNotice="模型准备未完成："+error.localizedDescription}
                 model.preparingLocalModels=false
             }
