@@ -1,0 +1,28 @@
+# Local build products and platform state
+.DS_Store
+.build-saylori*/
+native/.build/
+native/.swiftpm/
+dist/
+*.xcuserstate
+DerivedData/
+__pycache__/
+*.pyc
+
+# Credentials must stay in Keychain, never in the repository
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.mobileprovision
+
+# Historical prototypes and local recordings / diagnostics are not app source
+/prototype/
+/docs/*
+!/docs/architecture.md
+!/docs/development.md
+!/docs/code-review.md
+/recordings/
+/artifacts/
+*.log

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Saylori</string>
+	<key>CFBundleExecutable</key>
+	<string>Saylori</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>app.saylori.mac</string>
+	<key>CFBundleName</key>
+	<string>Saylori</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.6.2</string>
+	<key>CFBundleVersion</key>
+	<string>26</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.2</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>Saylori 需要收听所选应用的声音，将英语实时翻译为中文字幕。不会保存录音。</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Saylori 收听你选择的麦克风，将你的英语发言转为中英字幕并保存文字；不保存录音。</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>Saylori 使用系统采集接口收听会议声音，生成实时字幕；不接收屏幕画面，也不保存录音。</string>
+</dict>
+</plist>

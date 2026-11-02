@@ -1,0 +1,4 @@
+module SpeexDSP {
+    header "SpeexDSP.h"
+    export *
+}
