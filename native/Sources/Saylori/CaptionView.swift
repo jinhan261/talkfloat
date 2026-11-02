@@ -67,11 +67,10 @@ struct CaptionView:View {
                                 contextRow(english:item.source,chinese:item.translation,pending:!item.translationFinal,origin:item.audioOrigin)
                             }
                         }
-                        Color.clear.frame(height:1).id("context-end")
-                    }.frame(maxWidth:.infinity,alignment:.leading)
-                }.onChange(of:current?.id){_,_ in proxy.scrollTo("context-end",anchor:.bottom)}
-                    .onChange(of:geometry.size){_,_ in proxy.scrollTo("context-end",anchor:.bottom)}
-                    .accessibilityLabel("最近内容，\(model.previewing ? 1:history.count)段")
+                    }.frame(maxWidth:.infinity,alignment:.leading).id("context-start")
+                }.onChange(of:history.first?.id){_,_ in proxy.scrollTo("context-start",anchor:.top)}
+                    .onChange(of:geometry.size){_,_ in proxy.scrollTo("context-start",anchor:.top)}
+                    .accessibilityLabel("最近内容，最新在上，\(model.previewing ? 1:history.count)段")
             }.frame(minHeight:56)
             if !model.archiveError.isEmpty {Text(model.archiveError).font(.caption).foregroundStyle(.red)}
         }.padding(.horizontal,20).padding(.top,12).padding(.bottom,20)
@@ -109,7 +108,9 @@ struct CaptionView:View {
             16+height(item.translation.isEmpty ? "等待这段译文…":item.translation,size:15)+(model.showSource && !item.source.isEmpty ? 4+height(item.source,size:11.5):0)
         }
         let available=max(56,size.height-contentHeight(width:size.width-40,available:size.height)-126)
-        return Array(rows.suffix(CaptionHistoryLayout.visibleCount(heights:heights,available:available)))
+        // Fit the newest turns first, then display them from newest to oldest.
+        // Keep the model and saved meeting in their original chronological order.
+        return Array(rows.suffix(CaptionHistoryLayout.visibleCount(heights:heights,available:available)).reversed())
     }
     private func originTint(_ origin:AudioOrigin)->Color {
         if origin == .microphone{return model.captionStyle == .light ? Color(red:0.69,green:0.35,blue:0.13):Color(red:0.98,green:0.70,blue:0.42)}
