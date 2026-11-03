@@ -95,6 +95,11 @@ import Combine
     @Published var archiveError=""
     @Published private(set) var hasMeeting=false
     let archiveStore=TranscriptStore()
+    @Published private(set) var archiveDirectory=TranscriptStore.defaultDirectory
+    @Published private(set) var archiveLocationError=""
+    @Published private(set) var changingArchiveDirectory=false
+    private var archiveScopedURL:URL?
+    var canChangeArchiveDirectory:Bool{!active && (meeting==nil || meeting?.endedAt != nil)}
     private var meeting:MeetingRecord?
     private var saveTask:Task<Void,Never>?
     private var recovery:Task<Void,Never>?
@@ -106,6 +111,15 @@ import Combine
     init(reviewOnly:Bool=false){
         self.reviewOnly=reviewOnly
         if reviewOnly{return}
+        if let data=UserDefaults.standard.data(forKey:"archiveDirectoryBookmark") {
+            do {
+                var stale=false
+                let url=try URL(resolvingBookmarkData:data,options:[.withSecurityScope,.withoutUI],relativeTo:nil,bookmarkDataIsStale:&stale)
+                if url.startAccessingSecurityScopedResource(){archiveScopedURL=url}
+                archiveDirectory=url
+                if stale{savePreference(try url.bookmarkData(options:.withSecurityScope,includingResourceValuesForKeys:nil,relativeTo:nil),forKey:"archiveDirectoryBookmark")}
+            }catch{archiveLocationError="存储位置不可用，请在设置 → 会议记录中重新选择文件夹。"}
+        }
         if #available(macOS 26.4,*){Task{localModelsReady=await FastPreview.available()}}
         credentialSubscription=access.objectWillChange.sink{[weak self] in self?.objectWillChange.send()}
         if !CommandLine.arguments.contains("--ui-review"){Task{await access.load()}}
@@ -117,14 +131,18 @@ import Combine
         refreshSources()
         recovery=Task{[weak self] in
             guard let self else{return}
-            do{try await archiveStore.recoverInterrupted()}catch{archiveError="恢复记录失败："+error.localizedDescription}
+            if archiveDirectory != TranscriptStore.defaultDirectory {
+                do{try await archiveStore.changeDirectory(to:archiveDirectory)}
+                catch{archiveLocationError="无法写入记录文件夹，请重新选择位置。"}
+            }
+            do{try await archiveStore.recoverInterrupted(legacyDirectory:TranscriptStore.defaultDirectory)}catch{archiveError="恢复记录失败，原始文字仍在本机保留："+error.localizedDescription}
         }
         sleepObserver=NSWorkspace.shared.notificationCenter.addObserver(forName:NSWorkspace.willSleepNotification,object:nil,queue:.main){[weak self]_ in Task{@MainActor in await self?.stop(paused:true)}}
     }
     private func savePreference(_ value:Any?,forKey key:String){
         if !reviewOnly{UserDefaults.standard.set(value,forKey:key)}
     }
-    var busy:Bool{phase == .checking || phase == .connecting || phase == .stopping || connectionChecking}
+    var busy:Bool{phase == .checking || phase == .connecting || phase == .stopping || connectionChecking || changingArchiveDirectory}
     var active:Bool{phase == .live || busy}
     func refreshSources(){
         sources=[.system,.chrome]
@@ -143,13 +161,14 @@ import Combine
     func start(){
         guard !active else{return}
         guard meeting?.endedAt == nil else{notice="请先重试保存上一次记录";return}
+        guard archiveLocationError.isEmpty else{notice=archiveLocationError;return}
         guard canStart else{notice="请在设置中连接豆包同传";return}
         if mode == .local {
-            guard #available(macOS 26.4,*) else{notice="本地免费模式需要 macOS 26.4 或更新版本；可手动切换豆包。";return}
+            guard #available(macOS 26.4,*) else{notice="本地模型模式需要 macOS 26.4 或更新版本；可手动切换豆包。";return}
             if !localModelsReady{notice="请先准备本地英语与中文模型";return}
         }
         previewing=false
-        if meeting==nil { reconnects=0;streamClocks=[:];meeting=MeetingRecord(sourceName:source.name + "；麦克风按片段标注");meeting?.engine=mode;hasMeeting=true;captions=CaptionState();previewDrafts=[];localTranslations=[:];archiveError="" }
+        if meeting==nil { reconnects=0;streamClocks=[:];meeting=MeetingRecord(sourceName:source.name + "；麦克风按片段标注");meeting?.engine=mode;hasMeeting=true;captions=CaptionState();previewDrafts=[];localTranslations=[:];archiveError="";archiveURL=nil }
         savePreference(source.id,forKey:"sourceID")
         let token=UUID();generation=token;notice="";phase = .connecting;level=0;sentFrames=0;receivedEvents=0
         operation=Task{[weak self] in await self?.connect(token)}
@@ -157,11 +176,14 @@ import Combine
     private func makeEngine(origin:AudioOrigin)throws->any TranslationEngine {
         if mode == .doubao{return DoubaoEngine()}
         if #available(macOS 26.4,*){return AppleTranslationEngine(origin:origin)}
-        throw SayError.message("本地免费模式需要 macOS 26.4 或更新版本；可手动切换豆包。")
+        throw SayError.message("本地模型模式需要 macOS 26.4 或更新版本；可手动切换豆包。")
     }
     private func connect(_ token:UUID) async {
         let audio=SystemAudio();capture=audio
         do{
+            await recovery?.value
+            guard token==generation,!Task.isCancelled else{return}
+            guard archiveLocationError.isEmpty else{throw SayError.message(archiveLocationError)}
             let service=try makeEngine(origin:.system);client=service;captions.beginStream(service.sessionID)
             let preview=await makeFastPreview(sessionID:service.sessionID,origin:.system)
             guard token==generation,!Task.isCancelled else{if #available(macOS 26.4,*),let preview=preview as? FastPreview{await preview.stop()};return}
@@ -424,7 +446,11 @@ import Combine
         TestDiagnostics.record("injected-transient-failure")
         await failed(SayError.service(55000001,"diagnostic recovery probe"),token:generation)
     }
-    func retrySave() async {await saveRecord(ending:"已结束")}
+    func retrySave() async {
+        if meeting != nil{await saveRecord(ending:"已结束");return}
+        do{try await archiveStore.recoverInterrupted();archiveError=""}
+        catch{archiveError="恢复记录失败，原始文字仍在本机保留："+error.localizedDescription}
+    }
     private func scheduleSave(){
         guard saveTask==nil,meeting != nil else{return}
         saveTask=Task{[weak self] in
@@ -444,7 +470,10 @@ import Combine
         do{
             if let url=try await archiveStore.save(record){archiveURL=url}
             archiveError=""
-            TestDiagnostics.update(["archivePath":archiveURL?.path ?? "","archiveSegments":record.segments.count,"archiveStatus":record.status])
+            if record.hasText {
+                TestDiagnostics.archive(record)
+                TestDiagnostics.update(["archivePath":archiveURL?.path ?? "","archiveSegments":record.segments.count,"archiveStatus":record.status])
+            }
         }catch{
             // Keep the complete in-memory record so a subsequent End/Quit can retry.
             if ending != nil {meeting=record;hasMeeting=true}
@@ -453,7 +482,32 @@ import Combine
     }
     func finishForQuit() async -> Bool {await stop();if meeting != nil{await saveRecord(ending:"退出 App")};return meeting==nil}
     func openArchiveFolder(){
-        do{try FileManager.default.createDirectory(at:archiveStore.directory,withIntermediateDirectories:true);NSWorkspace.shared.open(archiveStore.directory)}catch{archiveError=error.localizedDescription}
+        do{
+            if archiveDirectory == TranscriptStore.defaultDirectory{try FileManager.default.createDirectory(at:archiveDirectory,withIntermediateDirectories:true)}
+            guard FileManager.default.fileExists(atPath:archiveDirectory.path) else{throw CocoaError(.fileNoSuchFile)}
+            if !NSWorkspace.shared.open(archiveDirectory){throw CocoaError(.fileReadUnknown)}
+        }catch{archiveLocationError="文件夹不可用，请在设置 → 会议记录中重新选择。";notice=archiveLocationError}
+    }
+    func setArchiveDirectory(_ url:URL) async {
+        guard canChangeArchiveDirectory else{return}
+        changingArchiveDirectory=true
+        defer{changingArchiveDirectory=false}
+        await recovery?.value
+        let scoped=url.startAccessingSecurityScopedResource()
+        do {
+            let bookmark:Data?=url == TranscriptStore.defaultDirectory ? nil:try url.bookmarkData(options:.withSecurityScope,includingResourceValuesForKeys:nil,relativeTo:nil)
+            if url == TranscriptStore.defaultDirectory{try FileManager.default.createDirectory(at:url,withIntermediateDirectories:true)}
+            try await archiveStore.changeDirectory(to:url)
+            archiveScopedURL?.stopAccessingSecurityScopedResource()
+            archiveScopedURL=scoped ? url:nil
+            archiveDirectory=url;archiveLocationError="";notice=""
+            savePreference(bookmark,forKey:"archiveDirectoryBookmark")
+            // A failed ended record may be retried into a newly selected folder.
+            if meeting?.endedAt != nil{await retrySave()}
+        }catch{
+            if scoped{url.stopAccessingSecurityScopedResource()}
+            archiveLocationError="无法使用所选文件夹："+error.localizedDescription
+        }
     }
     func revealLatestArchive(){if let archiveURL{NSWorkspace.shared.activateFileViewerSelecting([archiveURL])}}
     func resetCaption(){visible=true;onResetCaption?()}

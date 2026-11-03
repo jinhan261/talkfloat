@@ -21,9 +21,9 @@ struct PanelView:View {
                 }.font(.system(size:13,weight:.medium)).padding(.horizontal,2)
                     .accessibilityElement(children:.combine)
                 VStack(alignment:.leading,spacing:7){
-                    ChoiceStrip(title:"翻译模式",options:[(TranslationMode.local,"本地免费"),(.doubao,"豆包云端")],selection:Binding(get:{model.mode},set:{model.setMode($0)}))
+                    ChoiceStrip(title:"翻译模式",options:[(TranslationMode.local,"本地模型"),(.doubao,"豆包云端")],selection:Binding(get:{model.mode},set:{model.setMode($0)}))
                         .disabled(model.active || model.hasMeeting)
-                        .help(model.active || model.hasMeeting ? "结束本次会议后可切换翻译模式":"本地免费，豆包按服务用量计费")
+                        .help(model.active || model.hasMeeting ? "结束本次会议后可切换翻译模式":"本地模型无 API 费用，豆包按服务用量计费")
                     Text(model.mode.detail).font(.system(size:11)).foregroundStyle(.secondary)
                         .fixedSize(horizontal:false,vertical:true).padding(.horizontal,2)
                 }
@@ -94,14 +94,13 @@ struct PanelView:View {
                     Image(systemName:"clock.arrow.circlepath").font(.system(size:14)).foregroundStyle(.secondary).frame(width:24)
                     VStack(alignment:.leading,spacing:3){
                         Text("会议记录").font(.system(size:11.5,weight:.medium))
-                        Text("中英对照，自动存档").font(.system(size:11)).foregroundStyle(.secondary)
+                        Text(model.archiveURL != nil && !model.hasMeeting && model.phase == .idle && model.archiveError.isEmpty ? "已保存 · Markdown":"中英对照 · Markdown").font(.system(size:11)).foregroundStyle(.secondary)
                     }
                 }.padding(.vertical,4).padding(.horizontal,2)
             }.buttonStyle(QuietButtonStyle()).help("打开本机中英记录；不保存录音")
             Spacer(minLength:4)
             Menu {
                 if model.archiveURL != nil{Button("查看最近记录"){model.revealLatestArchive()}}
-                Button("设置"){model.showingSettings=true}
                 Divider()
                 Button("关于 TalkFloat"){NSApp.orderFrontStandardAboutPanel(nil)}
                 Divider()
@@ -122,13 +121,13 @@ struct SettingsView:View {
     @State private var section=0
     var body:some View {
         VStack(spacing:16){
-            ChoiceStrip(title:"设置分类",options:[(0,"字幕外观"),(1,"服务连接")],selection:$section)
+            ChoiceStrip(title:"设置分类",options:[(0,"字幕外观"),(1,"服务连接"),(2,"会议记录")],selection:$section)
             ScrollView {
                 VStack(alignment:.leading,spacing:16){
-                    if section==0 {appearance}else{ConnectionSettings(model:model,access:model.access)}
+                    if section==0 {appearance}else if section==1{ConnectionSettings(model:model,access:model.access)}else{ArchiveSettings(model:model)}
                 }.padding(1)
             }.scrollIndicators(.automatic)
-        }.frame(height:min(section==0 ? 454:480,(NSScreen.main?.visibleFrame.height ?? 800)-110))
+        }.frame(height:min(section==0 ? 454:(section==1 ? 480:320),(NSScreen.main?.visibleFrame.height ?? 800)-110))
             .onAppear{if !model.canStart{section=1}}
     }
     private var appearance:some View {

@@ -91,7 +91,7 @@ final class LocalEngineTests:XCTestCase {
         var s=item("Hello.",final:true);s.translation="你好。";s.translationFinal=true
         record.segments=[s]
         let roundTrip=try JSONDecoder().decode(MeetingRecord.self,from:JSONEncoder().encode(record))
-        XCTAssertEqual(roundTrip.engine,.local);XCTAssertTrue(roundTrip.markdown.contains("翻译模式：本地免费"))
+        XCTAssertEqual(roundTrip.engine,.local);XCTAssertTrue(roundTrip.markdown.contains("翻译模式：本地模型"))
         XCTAssertTrue(roundTrip.markdown.contains("你好。"));XCTAssertTrue(roundTrip.markdown.contains("Hello."))
     }
 }

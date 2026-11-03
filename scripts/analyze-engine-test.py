@@ -4,13 +4,14 @@
 These are model-available text timings, not manually annotated acoustic latency
 or frame-to-photon measurements. Different engine segmentation is kept explicit.
 """
-import collections,json,math,statistics,sys,re
+import plistlib,collections,json,math,statistics,sys,re
 from pathlib import Path
+from datetime import datetime
 
 out=Path(sys.argv[1])
 events=[json.loads(line) for line in (out/'events.ndjson').read_text().splitlines()]
 status=json.loads((out/'status.json').read_text())
-record=json.loads(Path(status['archivePath']).with_suffix('.json').read_text())
+record=plistlib.loads((out/'archive.plist').read_bytes()) if (out/'archive.plist').exists() else json.loads(Path(status['archivePath']).with_suffix('.json').read_text())
 engine=record.get('engine','doubao')
 frames=[e for e in events if e['kind']=='audio-send']
 anchors={}
@@ -72,5 +73,5 @@ for origin in ('system','microphone'):
     for block in range(6):
         blockTurns=[t for t in selected if block*120000<=t['startMS']<(block+1)*120000]
         report[origin]['twoMinuteFinalLatency'].append(summary([t['finalAfterEndSeconds'] for t in blockTurns]))
-(out/'engine-analysis.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
-print(json.dumps({k:v for k,v in report.items() if k not in ('turns','scope')},ensure_ascii=False,indent=2))
+(out/'engine-analysis.json').write_text(json.dumps(report,ensure_ascii=False,indent=2,default=lambda x:x.isoformat() if isinstance(x,datetime) else str(x)))
+print(json.dumps({k:v for k,v in report.items() if k not in ('turns','scope')},ensure_ascii=False,indent=2,default=lambda x:x.isoformat() if isinstance(x,datetime) else str(x)))

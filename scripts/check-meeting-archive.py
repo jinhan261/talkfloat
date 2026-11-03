@@ -2,9 +2,10 @@
 """Audit received event-to-archive equality, then locate reference differences.
 The reference comparison is an aid for manual review, not a translation score.
 """
-import json,pathlib,re,sys,difflib,collections
+import plistlib,json,pathlib,re,sys,difflib,collections
+from datetime import datetime
 out=pathlib.Path(sys.argv[1]);status=json.loads((out/'status.json').read_text())
-record=json.loads(pathlib.Path(status['archivePath']).with_suffix('.json').read_text())
+record=plistlib.loads((out/'archive.plist').read_bytes()) if (out/'archive.plist').exists() else json.loads(pathlib.Path(status['archivePath']).with_suffix('.json').read_text())
 rows=[json.loads(x) for x in (out/'events.ndjson').read_text().splitlines()]
 audit={"engine":record.get("engine","doubao")}
 for origin in ['system','microphone']:
@@ -30,8 +31,8 @@ audit['mdHasEverySourceAndTranslation']=all(normalize(s['source']) in normalize(
 audit['ended']=record.get('endedAt') is not None;audit['interruptions']=record.get('interruptions',[])
 referencePath=pathlib.Path(sys.argv[2]) if len(sys.argv)>2 else out.parent/'reference.txt'
 if not referencePath.exists() and len(sys.argv)==2:
- (out/'archive-audit.json').write_text(json.dumps(audit,ensure_ascii=False,indent=2))
- print(json.dumps(audit,ensure_ascii=False,indent=2));sys.exit(0)
+ (out/'archive-audit.json').write_text(json.dumps(audit,ensure_ascii=False,indent=2,default=lambda x:x.isoformat() if isinstance(x,datetime) else str(x)))
+ print(json.dumps(audit,ensure_ascii=False,indent=2,default=lambda x:x.isoformat() if isinstance(x,datetime) else str(x)));sys.exit(0)
 reference=referencePath.read_text()
 reference=' '.join(l.strip() for l in reference.splitlines() if not re.search(r'June 12, 2024|Page \d+ of|Transcript of Chair',l))
 reference=reference.replace('CHAIR POWELL.','')
@@ -53,7 +54,7 @@ if blocks:
  for op,i,j,k,l in matcher.get_opcodes():
   if op!='equal':diffs.append({'type':op,'refTokens':j-i,'reference':' '.join(a[i:j]),'recognized':' '.join(b[k:l]),'before':' '.join(a[max(0,i-8):i])})
  audit['reference']={'referenceTokens':len(a),'recognizedTokens':len(b),'differences':diffs,'note':'Normalized lexical comparison only; punctuation, numerals, speaker labels and spoken corrections differ from the edited PDF. No accuracy percentage inferred.'}
-(out/'archive-audit.json').write_text(json.dumps(audit,ensure_ascii=False,indent=2))
-print(json.dumps({k:v for k,v in audit.items() if k!='reference'},ensure_ascii=False,indent=2))
+(out/'archive-audit.json').write_text(json.dumps(audit,ensure_ascii=False,indent=2,default=lambda x:x.isoformat() if isinstance(x,datetime) else str(x)))
+print(json.dumps({k:v for k,v in audit.items() if k!='reference'},ensure_ascii=False,indent=2,default=lambda x:x.isoformat() if isinstance(x,datetime) else str(x)))
 print('Reference differences:')
 for d in audit.get('reference',{}).get('differences',[]):print(d)

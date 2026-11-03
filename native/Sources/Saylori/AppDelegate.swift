@@ -49,8 +49,9 @@ import SayloriCore
             if locked{self?.panel.styleMask.remove(.resizable)}else{self?.panel.styleMask.insert(.resizable)}
         }
         model.$phase.sink{[weak self]phase in
-            self?.status.button?.contentTintColor=phase == .live ? Brand.accentNS:nil
+            self?.status.button?.contentTintColor=nil // Let macOS adapt the template in every phase.
             self?.status.button?.toolTip="TalkFloat · \(phase.rawValue)"
+            TestDiagnostics.update(["statusIconUsesSystemTint":self?.status.button?.contentTintColor == nil,"statusIconIsTemplate":self?.status.button?.image?.isTemplate == true])
         }.store(in:&subscriptions)
         model.$showSource.dropFirst().sink{[weak self]show in
             guard let self,show,self.panel.frame.height<168 else{return}

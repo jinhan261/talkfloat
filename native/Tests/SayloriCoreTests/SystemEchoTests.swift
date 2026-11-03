@@ -52,10 +52,11 @@ final class SystemEchoTests:XCTestCase {
         let sys=segment(.system,"Our economy has made considerable progress.",1000,4000)
         let mic=segment(.microphone,sys.source,1100,4100)
         var record=MeetingRecord(sourceName:"Chrome");record.segments=[sys,mic]
-        let store=TranscriptStore(directory:dir)
+        try FileManager.default.createDirectory(at:dir,withIntermediateDirectories:true)
+        let recovery=dir.appendingPathComponent(".recovery")
+        let store=TranscriptStore(directory:dir,recoveryDirectory:recovery)
         let md=try await store.save(record)!
-        let decoder=JSONDecoder();decoder.dateDecodingStrategy = .iso8601
-        let archived=try decoder.decode(MeetingRecord.self,from:Data(contentsOf:md.deletingPathExtension().appendingPathExtension("json")))
+        let archived=try PropertyListDecoder().decode(TranscriptStore.Checkpoint.self,from:Data(contentsOf:recovery.appendingPathComponent(record.id.uuidString+".plist"))).record
         XCTAssertEqual(archived.segments.count,2)
         XCTAssertEqual(archived.segments[1].source,mic.source)
         XCTAssertEqual(archived.segments[1].possibleEchoOf,sys.id)

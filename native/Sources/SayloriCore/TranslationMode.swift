@@ -2,7 +2,7 @@ import Foundation
 
 public enum TranslationMode:String,Codable,CaseIterable,Sendable {
     case local, doubao
-    public var title:String{self == .local ? "本地免费":"豆包云端"}
+    public var title:String{self == .local ? "本地模型":"豆包云端"}
     public var requiresCredentials:Bool{self == .doubao}
     public var detail:String{self == .local ? "在这台 Mac 翻译，不上传声音":"声音发送至豆包，按服务用量计费"}
 }

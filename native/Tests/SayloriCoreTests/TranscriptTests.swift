@@ -64,14 +64,15 @@ final class TranscriptTests:XCTestCase {
         defer{try? FileManager.default.removeItem(at:dir)}
         var state=CaptionState();try state.apply(e(650));try state.apply(e(652,"Not thirteen."));try state.apply(e(653));try state.apply(e(654,"不是十三"))
         var record=MeetingRecord(sourceName:"Chrome");record.segments=state.segments
-        let store=TranscriptStore(directory:dir)
+        try FileManager.default.createDirectory(at:dir,withIntermediateDirectories:true)
+        let store=TranscriptStore(directory:dir,recoveryDirectory:dir.appendingPathComponent(".recovery"))
         let result=try await store.save(record);let md=try XCTUnwrap(result)
         XCTAssertTrue(try String(contentsOf:md).contains("中文（未定稿）：不是十三"))
         try await store.recoverInterrupted()
-        let decoder=JSONDecoder();decoder.dateDecodingStrategy = .iso8601
-        let recovered=try decoder.decode(MeetingRecord.self,from:Data(contentsOf:md.deletingPathExtension().appendingPathExtension("json")))
-        XCTAssertNotNil(recovered.endedAt);XCTAssertTrue(recovered.status.contains("已恢复"))
-        XCTAssertEqual(recovered.segments[0].source,"Not thirteen.")
+        let recovered=try String(contentsOf:md,encoding:.utf8)
+        XCTAssertTrue(recovered.contains("已恢复"))
+        XCTAssertTrue(recovered.contains("Not thirteen."))
+        XCTAssertFalse(FileManager.default.fileExists(atPath:md.deletingPathExtension().appendingPathExtension("json").path))
     }
     func testLateAutosaveCannotOverwriteFinalArchive() async throws {
         let dir=FileManager.default.temporaryDirectory.appendingPathComponent("saylori-test-\(UUID())")
@@ -79,7 +80,8 @@ final class TranscriptTests:XCTestCase {
         var record=MeetingRecord(sourceName:"系统")
         var s=CaptionSegment(sessionID:"s",startMS:0);s.source="Hello";record.segments=[s]
         let old=record;record.status="已结束";record.endedAt=Date();record.revision=2
-        let store=TranscriptStore(directory:dir);let saved=try await store.save(record);let md=try XCTUnwrap(saved)
+        try FileManager.default.createDirectory(at:dir,withIntermediateDirectories:true)
+        let store=TranscriptStore(directory:dir,recoveryDirectory:dir.appendingPathComponent(".recovery"));let saved=try await store.save(record);let md=try XCTUnwrap(saved)
         _ = try await store.save(old)
         XCTAssertTrue(try String(contentsOf:md).contains("状态：已结束"))
     }

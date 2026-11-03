@@ -1,44 +1,77 @@
 # TalkFloat
 
-Swift + SwiftUI / AppKit 原生 macOS 菜单栏英中实时翻译工具。支持所有系统声音或 Chrome，另一路收听当前系统麦克风；可切换 Apple 本地免费模式与豆包云端模式；大字当前字幕、可拖动与八方向缩放的前文窗口、本地中英文字档案。
+轻量的原生 macOS 菜单栏英中同声字幕工具。收听所有系统声音或 Chrome，也可独立收听麦克风；大字当前字幕、可拖动与八方向缩放的前文窗口、自动双语 Markdown 存档。
 
-现名 TalkFloat，原名 Saylori。0.8.1 使用石墨灰、银白与双行对话标志；应用身份和旧存档目录保持兼容。麦克风门限按需展开，主面板保持紧凑。
+- **本地模型**：使用 Apple 的设备端语音识别和翻译，无 API 费用；首次下载语言模型后在本机处理。
+- **豆包云端**：使用你自己的火山引擎同声传译凭据，服务按账号用量计费，不附赠额度。
+- **会议记录**：设置 → 会议记录 → 选择文件夹。每场一个 `.md`，包含中英文本、音源和未定稿/中断提示；不保存录音。
 
-## 运行与构建
+Swift + SwiftUI / AppKit，Apple Silicon。现名 TalkFloat，原名 Saylori；旧应用身份、偏好、钥匙串和默认记录目录保持兼容。
 
-- Apple Silicon Mac，运行底线 macOS 14.2；开发需支持本项目 API 的最新 Xcode / Swift 6 工具链。
-- 本地免费模式需要 macOS 26.4+ 及已安装英语识别与中英翻译模型，无 API 费用，不上传音频。首次准备语言模型需下载；模型缺失时明确提示，不会自动调用收费服务。
-- 选择豆包云端模式才需要 AST 同声传译凭据：自己的 API Key，或 App ID + Access Token。在 App 的设置中填写，可仅本次使用或保存到 macOS 钥匙串。
-- 授予系统音频和麦克风权限；凭据、录音和真实会议记录均不进入源码仓库。
+## 从源码安装
+
+需要完整 Xcode 与 Command Line Tools，SDK 必须包含 macOS 26.4 的 Speech / Translation API。本项目实际构建环境为 Swift 6.4.2 / macOS 27 SDK。首次使用 Xcode 请完成其正常初始化。
+
+仓库公开后，任何人都可运行以下命令；当前私有阶段需要仓库访问权限：
+
+```sh
+git clone https://github.com/jinhan261/saylori.git
+cd saylori
+scripts/install-local.sh --ad-hoc
+```
+
+脚本在本机编译并安装到 `~/Applications/TalkFloat.app`。`--ad-hoc` 适合没有开发证书的本机源码试用，不是公证分发包；重新构建后 macOS 可能要求重新授予采音/钥匙串权限。不会替换已有证书签名版本，以免破坏原身份。升级前先在 App 中结束会议并退出。
+
+若有稳定开发证书，推荐固定同一签名身份安装：
+
+```sh
+security find-identity -v -p codesigning
+TALKFLOAT_SIGN_IDENTITY='你的证书 SHA-1' scripts/install-local.sh
+```
+
+多个证书时必须显式选择，避免更新意外换身份。也可只构建、不安装：`scripts/build-app.sh --ad-hoc`。签名产物在 `dist/`，不提交仓库。项目不要求关闭 Gatekeeper、SIP 或删除 quarantine。
+
+## 首次使用
+
+1. 打开右上角 TalkFloat 菜单栏图标。选择“本地模型”，点击“准备本地语言模型”，按 Apple 系统提示下载英语识别及英中翻译资源。
+2. 本地模式要求 **macOS 26.4+**；不满足条件时可手动选择豆包。云端部署最低声明为 macOS 14.2，较早系统尚缺实机覆盖；首轮使用建议选择已验证的新系统。
+3. 豆包模式在设置 → 服务连接中填写你自己的 API Key，或 App ID + Access Token。可仅本次使用或保存到 macOS 钥匙串；不把密钥写入代码。
+4. 授予系统声音权限；需要麦克风时开启该开关并授权。Chrome 音源筛选整个 Chrome 进程的音频，不是某一个标签页。
+5. 点击开始翻译；结束时点击“结束并存档”。菜单底部“会议记录”打开保存文件夹。首次默认位置是 `~/Library/Application Support/Saylori/Recordings`，可随时在无进行中会议时更改。
+
+## 本地模型是怎样工作的
+
+系统声音由 ScreenCaptureKit 获取，麦克风由 AVAudioEngine 获取；两路独立处理。`SpeechAnalyzer` + `SpeechTranscriber` 的渐进转写先输出英语，再由 `TranslationSession` 的已安装英语 → 简体中文模型翻译，使用低延迟策略。识别修订会更新字幕，最终结果写入记录。
+
+这是 Apple 提供的设备端模型管线，不是项目自带的 Whisper、Qwen 或大语言模型。模型由 Apple 下载和管理，不随源码分发，Apple 未通过这些 API 提供可选择的权重版本。下载资源需要网络；本地模式不调用豆包、不上传音频或文字，不会偷偷回退到付费服务。翻译质量与豆包不同，数字、姓名和术语必须核对。
+
+## 使用边界与隐私
+
+- 目前仅英语 → 简体中文。来源标签表示采音通道，不代表本人声纹；附近较响的人声也可能被麦克风收录。
+- 可调麦克风门限、系统语音处理和参考回声消除用于减少干扰，不能保证只保留本人声音或零漏译。
+- 暂停/继续属于同一份记录。历史字幕由新到旧显示，文档按会议顺序保存；只保存实际收到的文字，缺译和未定稿有明确提示。
+- 用户文件夹仅生成 Markdown；异常退出恢复使用 App 私有目录中的临时检查点，成功结束后移除。旧版本 JSON 原件移入私有备份，旧 Markdown 留在原处。
+- 本项目无账号、广告或遥测。豆包模式会将所选音频发送给火山引擎；费用及服务端数据处理遵循你的服务账号条款。
+- 使用前向会议参与者说明采音和翻译；选择 iCloud、共享盘等存档目录时，文件会按该目录自己的同步规则处理。
+
+完整说明见 [隐私说明](PRIVACY.md)。不要在 Issue 中发送密钥、未脱敏会议记录或诊断文件。
+
+## 开发与发布
 
 ```sh
 swift test --package-path native --scratch-path .build-talkfloat
-scripts/build-app.sh
-open dist/TalkFloat.app
+python3 scripts/check-repository.py
+python3 scripts/check-repository.py --history
 ```
 
-打包脚本使用本机 Apple Development 签名，或显式设置 `TALKFLOAT_SIGN_IDENTITY`。为保持录音授权与钥匙串身份稳定，不会偷偷退回临时签名。没有证书时仍可用 `swift build --package-path native --scratch-path .build-talkfloat` 检查编译。
-
-## 当前行为与限制
-
-- 系统声与麦克风分别采集，使用当前选择的引擎各自识别与翻译；来源标签表示采音通道，不代表说话人身份。结束当前会议后可切换模式。
-- Apple 语音突显、参考回声消除与可调麦克风门限共同减少干扰。门限默认 −28 dBFS，可调 −50～−12；不是声压计，也不能区分同样响亮的两个人。
-- 本地模式边识别边更新中文，保留最后一次可读译文直到修订完成；豆包模式可使用同样的本地预览，随后以云端结果定稿。两种模式都保存全部收到的原文与译文。
-- 当前字幕在顶部大字显示，前文由新到旧排列；窗口缩小时优先保留最近几句。存档继续按会议时间顺序保存。
-- 仅在本机保存已收到的中英文字，不保存录音。网络中断、未定稿和未收到译文会标注，不能保证零漏译。
-- 普通启动不执行自动播放、采音或联调；集成测试必须显式启动；只有豆包模式需要凭据并消耗 API 额度。
-
-## 工程
-
-`native/` 是当前原生工程；`scripts/` 是构建与验证工具。历史 HTML 品牌原型、真实会议文字、诊断日志、截图和签名产物保留在开发机，默认不跟踪。
-
 - [架构与数据流](docs/architecture.md)
-- [构建、验证与提交检查](docs/development.md)
-- [本轮代码审查与优化](docs/code-review.md)
-- [开源、Homebrew 与 Mac App Store 发布方案](docs/distribution.md)
+- [构建、测试与清理](docs/development.md)
+- [贡献说明](CONTRIBUTING.md)
+- [发布方案：直接下载、Homebrew、Mac App Store](docs/distribution.md)
+- [安全问题反馈](SECURITY.md)
 
-SpeexDSP 代码及其 BSD 许可证位于 `native/Sources/SpeexDSP/`，来源及版本见 `ORIGIN.md`。应用代码尚未指定开源许可证。
+目前是开发者预览版；没有公开安装包、Homebrew Cask 或 App Store 版本。公开源码与发布公证成品是两个步骤：普通用户的成品安装仍需 Developer ID 签名、公证和全新 Mac 验收。不要把开发签名 ZIP 当作已公证产品分发。
 
-## 分发状态
+## 许可证
 
-当前仍是私有仓库、本机开发签名试用版；没有公开 Release 或 Homebrew Cask，也未提交 Mac App Store。普通用户的一键安装需先完成 Developer ID 签名、公证与发布。开源许可证尚待作者选择。
+应用代码采用 [MIT](LICENSE)。SpeexDSP 保留其 [BSD 许可证](native/Sources/SpeexDSP/COPYING)，来源和版本见 [ORIGIN.md](native/Sources/SpeexDSP/ORIGIN.md)，两份许可证均随 App 打包。Apple 框架与语言模型、豆包服务不属于本项目的 MIT 授权范围。

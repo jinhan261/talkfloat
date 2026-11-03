@@ -1,6 +1,6 @@
 # TalkFloat 架构
 
-更新：2026-11-02 · 0.7.0。采用 Swift Package；AppKit 管理菜单栏和窗口，SwiftUI 绘制内容。保持系统声与麦克风两条独立的音频、识别和字幕时间线。
+更新：2026-11-03 · 0.8.2。采用 Swift Package；AppKit 管理菜单栏和窗口，SwiftUI 绘制内容。保持系统声与麦克风两条独立的音频、识别和字幕时间线。
 
 ```mermaid
 flowchart TD
@@ -21,7 +21,7 @@ flowchart TD
     Recent --> Presentation[CaptionPresentation · 预览替换 / 断句 / 回声标记]
     Presentation --> UI
     State --> Record[MeetingRecord · 完整定稿与未定稿片段]
-    Record --> Store[TranscriptStore actor · JSON / Markdown]
+    Record --> Store[TranscriptStore actor · Markdown / 私有恢复点]
     Relay --> Preview[FastPreview · 可选本机识别翻译]
     MicRelay --> Preview
     Preview --> Presentation
@@ -55,7 +55,11 @@ flowchart TD
 
 ## 持久化与边界
 
-凭据保存在 macOS 钥匙串，偏好保存在 UserDefaults；会议文字位于 Application Support 下的 `Saylori/Recordings`。JSON 保留服务原始片段、来源与疑似回声标记，Markdown 提供句子视图和回声附录。豆包模式的本机预览不会替代未收到的云端定稿写入存档。本地模式保存 Apple 的原文和翻译定稿，并写入 `engine: local`；旧档案缺少此可选字段仍可读取。
+凭据保存在 macOS 钥匙串，偏好保存在 UserDefaults。会议记录默认位于 Application Support 下的 `Saylori/Recordings`；用户可在设置选择文件夹，使用 security-scoped bookmark 记住授权。当前会议结束前禁止更改位置；结束写入失败时可另选文件夹并重试。
+
+用户目录只写 Markdown，保留原文、译文、来源、疑似回声附录和不完整提示。TranscriptStore 在 App 私有 Recovery 目录先原子写入二进制 plist 检查点，再原子写 Markdown；完成后删除检查点。检查点带原目标目录，重启恢复不会悄悄写到另一个目录。旧默认目录中可识别的 JSON 移入 Recovery/Legacy 备份，其他 JSON 不动。保存失败仍推进修订门限，避免迟到旧快照覆盖新检查点；用户选择的目录丢失时明确报错，不重新创建或静默回退。
+
+豆包模式的本机预览不会替代未收到的云端定稿写入存档。本地模式保存 Apple 的原文与翻译结果。诊断测试的结构化快照仅写到显式指定的测试输出目录，用于与事件逐项核对，不再要求用户记录旁存在 JSON。
 
 门限表示输入音量，不表示讲话人身份。较响旁人仍可能通过；声纹登记与说话人分离未实现。完整档案的回声匹配和序列化仍随会议增长，尚未做多小时性能验收；本轮仅消除了实时展示的整场过滤开销。
 

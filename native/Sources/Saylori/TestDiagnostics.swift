@@ -1,4 +1,5 @@
 import AppKit
+import SayloriCore
 
 // Opt-in diagnostic logging. Normal launches save only the local bilingual meeting archive.
 @MainActor enum TestDiagnostics {
@@ -33,6 +34,11 @@ import AppKit
         guard let directory,JSONSerialization.isValidJSONObject(value) else{return}
         try? FileManager.default.createDirectory(at:directory,withIntermediateDirectories:true)
         if let data=try? JSONSerialization.data(withJSONObject:value,options:[.prettyPrinted,.sortedKeys]){io.async{try? data.write(to:directory.appendingPathComponent(name),options:.atomic)}}
+    }
+    static func archive(_ record:MeetingRecord){
+        guard let directory else{return}
+        let encoder=PropertyListEncoder();encoder.outputFormat = .binary
+        if let data=try? encoder.encode(record){io.async{try? data.write(to:directory.appendingPathComponent("archive.plist"),options:.atomic)}}
     }
     static func snapshot(_ window:NSWindow,_ name:String){
         guard let directory,let view=window.contentView else{return}
