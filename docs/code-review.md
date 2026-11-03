@@ -68,8 +68,8 @@ Release 构建和稳定签名验证通过，检查了深浅色组件。两轮合
 用已安装验收的 0.8.4 构建生成开发 DMG：镜像校验、只读挂载、Applications 链接、镜像内 App 完整文件对账与签名验证均通过，SHA256 文件一致。参数检查、开发签名拒绝进入正式模式、已有产物拒绝覆盖通过。所有临时打包与验证挂载目录已清理，成品保留。本轮没有重建 App 或重复音频测试；真实 Developer ID 公证分支与全新 Mac 首装尚未验证。现有 App 的 Gatekeeper 评估拒绝、无公证票据，因此开发 DMG 不作为正式分发包。
 
 
-## 正式签名与公证提交（2026-11-03）
+## 正式签名、公证与私有草稿验收（2026-11-03）
 
 0.8.4 build36 的独立分发副本已使用 Developer ID Application 签名；深度严格校验、Hardened Runtime 和可信时间戳通过。动态依赖仅为系统框架和系统 Swift 库，无本机 Homebrew 或开发目录依赖。原安装版和开发归档保持原样。
 
-用户在本机配置 notarytool 钥匙串 profile 后，已实际验证可用并提交首个 DMG；Apple 当前返回 In Progress，未宣称公证或 Gatekeeper 已通过。私有 prerelease 草稿仍未发布、无附件。后续在 Accepted 后验收票据、镜像内容和 Gatekeeper；全新 Mac 首装、最低系统和升级覆盖仍单独待办。本轮没有修改应用代码或重跑音频测试。
+用户在本机配置 notarytool 钥匙串 profile 后，首个 DMG 已获 Apple Accepted，日志无 issues。DMG 票据、镜像完整性及 SHA256 校验通过；只读挂载后，内含 App 的完整文件清单与已签名源副本一致，Applications 链接正确，DMG 与 App 的 Gatekeeper 均返回 Notarized Developer ID。DMG 和校验文件已上传私有 prerelease 草稿；从 GitHub 下载回验，两份文件均与本地逐字节一致。草稿未发布，仓库仍为 private。全新 Mac 首装、最低系统和升级覆盖仍单独待办。本轮没有修改应用代码或重跑音频测试，未替换现有安装版；临时打包和挂载目录已清理，签名产物保留。
