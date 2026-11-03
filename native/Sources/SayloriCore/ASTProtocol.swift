@@ -56,13 +56,21 @@ public struct ASTEvent: Sendable {
     public let receivedAt = ProcessInfo.processInfo.systemUptime
     public let usage: [String: Double]
     public init(data: Data) throws {
+        // Protobuf varints are unsigned on the wire. A malformed response must
+        // fail the connection, not trap while converting UInt64 to native Int.
+        func integer(_ fields:[Proto.Field],_ number:Int)throws->Int {
+            guard let value=Int(exactly:fields.first{$0.number==number}?.integer ?? 0) else{
+                throw SayError.message("服务消息整数超出支持范围")
+            }
+            return value
+        }
         let f = try Proto.parse(data)
-        type = Int(f.first{$0.number == 2}?.integer ?? 0)
+        type = try integer(f,2)
         text = f.first{$0.number == 4}?.text ?? ""
-        start = Int(f.first{$0.number == 5}?.integer ?? 0); end = Int(f.first{$0.number == 6}?.integer ?? 0)
+        start = try integer(f,5); end = try integer(f,6)
         let m = try Proto.parse(f.first{$0.number == 1}?.data ?? Data())
         sessionID = m.first{$0.number == 1}?.text ?? ""
-        status = Int(m.first{$0.number == 3}?.integer ?? 0); message = m.first{$0.number == 4}?.text ?? ""
+        status = try integer(m,3); message = m.first{$0.number == 4}?.text ?? ""
         var usage: [String: Double] = [:]
         if let billing = m.first(where: {$0.number == 5}) {
             for item in try Proto.parse(billing.data) where item.number == 1 {

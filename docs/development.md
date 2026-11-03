@@ -9,17 +9,29 @@ swift test --package-path native --scratch-path .build-talkfloat
 scripts/build-app.sh
 ```
 
-构建脚本从 `native/Resources/AppIcon.png` 制作图标，输出 `dist/TalkFloat.app` 和版本 ZIP，不依赖历史 HTML 原型目录。签名使用 `TALKFLOAT_SIGN_IDENTITY`，未设置时仅在本机恰有一个 Apple Development 证书时自动选择；兼容旧环境变量 `SAYLORI_SIGN_IDENTITY`；没有唯一可用证书会明确失败；开发者可以显式传入 `--ad-hoc` 做本机源码试用，绝不静默退回临时签名。证书私钥、钥匙串、签名 ZIP 不提交 Git。
+构建脚本从 `native/Resources/AppIcon.png` 制作图标，输出 `dist/Build.noindex/TalkFloat.app` 和版本 ZIP，不依赖历史 HTML 原型目录。签名使用 `TALKFLOAT_SIGN_IDENTITY`，未设置时仅在本机恰有一个 Apple Development 证书时自动选择；兼容旧环境变量 `SAYLORI_SIGN_IDENTITY`；没有唯一可用证书会明确失败；开发者可以显式传入 `--ad-hoc` 做本机源码试用，绝不静默退回临时签名。证书私钥、钥匙串、签名 ZIP 不提交 Git。
 
-需要签名安装才能稳定检验系统录音权限和钥匙串读取。更换签名身份可能触发重新授权；在同一开发机上应显式固定原身份。本机安装版继续保留原开发签名；0.8.4 独立分发副本已完成 Developer ID 签名，DMG 公证 Accepted、票据和 Gatekeeper 验证通过，附件已上传私有 Release 草稿，尚未公开分发。
+需要签名安装才能稳定检验系统录音权限和钥匙串读取。更换签名身份可能触发重新授权；在同一开发机上应显式固定原身份。0.8.5 分发版已完成 Developer ID 签名，DMG 公证 Accepted、票据和 Gatekeeper 验证通过，作为私有预览 Release 提供下载。
+
+### 从源码安装
+
+需要完整 Xcode 与包含 macOS 26.4 Speech / Translation API 的 SDK。当前私有阶段还需仓库访问权限。
+
+```sh
+git clone https://github.com/jinhan261/talkfloat.git
+cd talkfloat
+scripts/install-local.sh --ad-hoc
+```
+
+脚本编译并安装到 `~/Applications/TalkFloat.app`。临时签名仅供本机试用，重新构建可能要求再次授权，且脚本拒绝覆盖已有证书签名版。持有开发证书时用 `TALKFLOAT_SIGN_IDENTITY='你的证书 SHA-1' scripts/install-local.sh` 固定签名。不要关闭系统安全检查来替代签名。
 
 ### DMG 打包
 
-已有 `dist/TalkFloat.app` 后运行 `scripts/package-dmg.sh --development`，得到带 `-development.dmg` 后缀的开发预览及 SHA256 文件。内容仅有签名 App、Applications 链接及安装说明；不打包本机会议记录、模型、密钥、诊断文件。脚本核对签名和 arm64、拒绝覆盖已有产物、校验镜像并自动清理项目内临时打包目录，不重签或替换已安装 App。
+已有 `dist/Build.noindex/TalkFloat.app` 后运行 `scripts/package-dmg.sh --development`，得到带 `-development.dmg` 后缀的开发预览及 SHA256 文件。内容仅有签名 App、Applications 链接及安装说明；不打包本机会议记录、模型、密钥、诊断文件。脚本核对签名和 arm64、拒绝覆盖已有产物、校验镜像并自动清理项目内临时打包目录，不重签或替换已安装 App。
 
-正式模式为 `scripts/package-dmg.sh --release`：需要源 App 已有 Developer ID Application 签名，并设置同类 `TALKFLOAT_SIGN_IDENTITY` 和已配置的 `TALKFLOAT_NOTARY_PROFILE`。它给 DMG 签名，提交公证，验证 Accepted 后绑定票据并检查 Gatekeeper，最后生成 SHA256。不会自动创建证书、索取密码或上传 GitHub Release。开发证书不能走正式模式；0.8.4 已实际走通正式分支：Apple Accepted、票据绑定/验证、DMG 与内含 App 的 Gatekeeper 检查均通过。详细顺序见发布文档。
+正式模式为 `scripts/package-dmg.sh --release`：需要源 App 已有 Developer ID Application 签名，并设置同类 `TALKFLOAT_SIGN_IDENTITY` 和已配置的 `TALKFLOAT_NOTARY_PROFILE`。它给 DMG 签名，提交公证，验证 Accepted 后绑定票据并检查 Gatekeeper，最后生成 SHA256。不会自动创建证书、索取密码或上传 GitHub Release。开发证书不能走正式模式；0.8.5 已实际走通正式分支：Apple Accepted、票据绑定/验证、DMG 与内含 App 的 Gatekeeper 检查均通过。详细顺序见发布文档。
 
-可用 `TALKFLOAT_APP_PATH` 指向独立的分发 App 副本，例如 `dist/release-0.8.4/TalkFloat.app`，避免给正式包签名时替换现有开发产物。脚本仍将 DMG 和校验文件输出到项目 `dist/`；默认源 App 不变。分发签名不是重新编译，同一构建可以保留开发副本与分发副本。
+可用 `TALKFLOAT_APP_PATH` 指向独立的签名 App 副本；脚本仍将 DMG 和校验文件输出到项目 `dist/`，不修改源 App。额外构建副本应放在 `.noindex` 目录内或保存为 ZIP，避免被应用搜索收录。
 
 ## 自动与实机验证
 
@@ -66,4 +78,11 @@ git diff --cached --stat
 
 `BrandArtwork.swift` 是菜单标志与 App 图标的共用轮廓。打包脚本在生成 icns 前调用可执行文件的 `--render-brand-icon` 入口，将确定性的纯色 PNG 输出到 `native/Resources/AppIcon.png`；此入口不启动窗口、采音或读取钥匙串。0.8.1 使用石墨色底与浅色字幕标志，原 imagegen 选定方案作为形状来源。
 
-0.8.2 增加 `scripts/install-local.sh [--ad-hoc]`，安装到用户 Applications 并保留旧安装备份；正在运行时拒绝替换。README 含完整命令。仓库公开前额外执行 `python3 scripts/check-repository.py --history`，检查所有可达历史中的文本与文件范围。
+0.8.2 增加 `scripts/install-local.sh [--ad-hoc]`，安装到用户 Applications 并保留旧安装备份；正在运行时拒绝替换。安装命令见本文。仓库公开前额外执行 `python3 scripts/check-repository.py --history`，检查所有可达历史中的文本与文件范围。
+
+
+## 构建与本机安装清理（0.8.5）
+
+展开的构建 App 存入 `dist/Build.noindex/`，版本 ZIP/DMG 仍位于 `dist/`。构建先在项目临时目录组装全新 Bundle，签名验证后才替换构建输出，避免旧资源混入。安装脚本将旧版压缩为 ZIP 并验证归档，替换失败时恢复原安装；不再产生会被启动器收录的 `.app.backup` 目录。正常退出或失败时清理自己的临时安装目录。
+
+不要同时保留 `~/Applications/TalkFloat.app` 与 `/Applications/TalkFloat.app`。DMG 用户保留自己选择的一个安装位置即可；源码安装脚本默认使用前者。移动或卸载 App 不应删除钥匙串、偏好及会议记录。

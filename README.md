@@ -1,88 +1,45 @@
 # TalkFloat
 
-轻量的原生 macOS 菜单栏英中同声字幕工具。收听所有系统声音或 Chrome，也可独立收听麦克风；大字当前字幕、可拖动与八方向缩放的前文窗口、自动双语 Markdown 存档。
+原生 macOS 菜单栏实时字幕工具，将英语会议、视频和麦克风发言翻译成简体中文。
 
-- **本地模型**：使用 Apple 的设备端语音识别和翻译，无 API 费用；首次下载语言模型后在本机处理。
-- **豆包云端**：使用你自己的火山引擎同声传译凭据，服务按账号用量计费，不附赠额度。
-- **会议记录**：设置 → 会议记录 → 选择文件夹。每场一个 `.md`，包含中英文本、音源和未定稿/中断提示；不保存录音。
-- **运行提示**：翻译中菜单栏图标右下角显示蓝点，暂停或结束后隐藏；图标主体始终跟随 macOS 的自适应颜色。
+- 收听全部系统声音或 Chrome，可同时开启麦克风，并区分字幕来源。
+- 悬浮字幕显示当前句和最近内容，支持拖动、缩放、透明度与字号调整。
+- 在 Apple 本地模型和豆包云端之间切换，每场会话自动保存中英 Markdown。
 
-Swift + SwiftUI / AppKit，Apple Silicon。现名 TalkFloat，原名 Saylori；旧应用身份、偏好、钥匙串和默认记录目录保持兼容。
+## 如何实现
 
-## DMG 安装（私有预览）
+使用 **Swift、SwiftUI 和 AppKit** 构建。系统声音通过 ScreenCaptureKit 获取，麦克风通过 AVAudioEngine 获取，两路独立处理。
 
-0.8.4 的 DMG 已完成 Developer ID 签名和 Apple 公证，安装包及 SHA256 校验文件已放入私有 [Release 草稿](https://github.com/jinhan261/talkfloat/releases)。**仓库保持私有，草稿尚未发布，也没有公开下载入口。** 本机签名、票据、镜像内容和 Gatekeeper 验证通过；全新 Mac 首次安装及旧版升级仍待实测。
+| 模式 | 处理流程 | 费用与数据 |
+| --- | --- | --- |
+| 本地模型 | SpeechAnalyzer / SpeechTranscriber 转写英语，再由 TranslationSession 的低延迟策略翻译 | 无 API 费用；首次下载 Apple 语言资源后在本机处理 |
+| 豆包云端 | 通过 WebSocket 将所选音频发送至火山引擎同声传译服务 | 使用自己的凭据，按服务用量计费 |
 
-安装时打开 `.dmg`，把 TalkFloat 拖入 Applications，再从菜单栏使用；不需要 Xcode。当前提供 Apple Silicon 版本，本地模式需要 macOS 26.4 或更新版本。
+字幕随识别结果更新，停止时收尾并保存已收到的中英文本。不保存录音。本地模式不会自动切换到付费服务。
 
-已提供可重复的 DMG 打包脚本。带 `-development.dmg` 的文件仅用于打包验收，不要当作已公证成品发给普通用户。正式发布步骤见 [发布说明](docs/distribution.md)。
+## 安装
 
-## 从源码安装
+**Apple Silicon（M 系列）Mac。** 本地模式需要 **macOS 26.4+**；豆包模式声明最低 macOS 14.2，较早系统仍待完整实机验证。暂不提供 Intel 版本。
 
-需要完整 Xcode 与 Command Line Tools，SDK 必须包含 macOS 26.4 的 Speech / Translation API。本项目实际构建环境为 Swift 6.4.2 / macOS 27 SDK。首次使用 Xcode 请完成其正常初始化。
+1. 在 [Releases](https://github.com/jinhan261/talkfloat/releases) 下载 `TalkFloat-版本号-macOS-arm64.dmg`。
+2. 打开 DMG，将 **TalkFloat** 拖入 **Applications**。
+3. 从 Applications 启动，点击屏幕右上角的菜单栏图标。
 
-仓库公开后，任何人都可运行以下命令；当前私有阶段需要仓库访问权限：
+发布的 DMG 使用 Developer ID 签名并通过 Apple 公证，附有 SHA256 校验文件。当前仓库保持私有，下载需要登录有访问权限的 GitHub 账号。
 
-```sh
-git clone https://github.com/jinhan261/talkfloat.git
-cd talkfloat
-scripts/install-local.sh --ad-hoc
-```
+升级前先结束并保存会话、退出旧版，再替换原 App。只保留一个安装位置；如果旧版位于 `~/Applications`，请替换那里或先移除旧版。
 
-脚本在本机编译并安装到 `~/Applications/TalkFloat.app`。`--ad-hoc` 适合没有开发证书的本机源码试用，不是公证分发包；重新构建后 macOS 可能要求重新授予采音/钥匙串权限。不会替换已有证书签名版本，以免破坏原身份。升级前先在 App 中结束会议并退出。
+## 使用
 
-若有稳定开发证书，推荐固定同一签名身份安装：
+1. **选模式**：本地模式点击“准备本地语言模型”；豆包模式在“设置 → 服务连接”填写 API Key，或 App ID 与 Access Token。
+2. **选音源**：选择全部系统声音或 Chrome；需要自己的发言时开启麦克风。按 macOS 提示授予相应采音权限。
+3. **开始翻译**：播放英语或开始会议，悬浮窗口显示中英字幕；可暂停和继续。
+4. **结束并存档**：每场会话生成一个 `.md` 文件。保存位置可在“设置 → 会议记录”更改。
 
-```sh
-security find-identity -v -p codesigning
-TALKFLOAT_SIGN_IDENTITY='你的证书 SHA-1' scripts/install-local.sh
-```
+目前仅支持英语 → 简体中文。来源标签表示采音通道，麦克风过滤不能保证只识别本人；数字、姓名及专业术语请核对。使用前请告知会议参与者。
 
-多个证书时必须显式选择，避免更新意外换身份。也可只构建、不安装：`scripts/build-app.sh --ad-hoc`。签名产物在 `dist/`，不提交仓库。项目不要求关闭 Gatekeeper、SIP 或删除 quarantine。
-
-## 首次使用
-
-1. 打开右上角 TalkFloat 菜单栏图标。选择“本地模型”，点击“准备本地语言模型”，按 Apple 系统提示下载英语识别及英中翻译资源。
-2. 本地模式要求 **macOS 26.4+**；不满足条件时可手动选择豆包。云端部署最低声明为 macOS 14.2，较早系统尚缺实机覆盖；首轮使用建议选择已验证的新系统。
-3. 豆包模式在设置 → 服务连接中填写你自己的 API Key，或 App ID + Access Token。可仅本次使用或保存到 macOS 钥匙串；不把密钥写入代码。
-4. 授予系统声音权限；需要麦克风时开启该开关并授权。Chrome 音源筛选整个 Chrome 进程的音频，不是某一个标签页。
-5. 点击开始翻译；结束时点击“结束并存档”。菜单底部“会议记录”打开保存文件夹。首次默认位置是 `~/Library/Application Support/Saylori/Recordings`，可随时在无进行中会议时更改。
-
-## 本地模型是怎样工作的
-
-系统声音由 ScreenCaptureKit 获取，麦克风由 AVAudioEngine 获取；两路独立处理。`SpeechAnalyzer` + `SpeechTranscriber` 的渐进转写先输出英语，再由 `TranslationSession` 的已安装英语 → 简体中文模型翻译，使用低延迟策略。识别修订会更新字幕，最终结果写入记录。
-
-这是 Apple 提供的专用语音识别与文本翻译管线。当前明确使用 `TranslationSession.Strategy.lowLatency`；Apple 将其说明为适合实时音频翻译的传统翻译模型策略，速度和耗电优先。当前没有调用 Foundation Models 通用对话大语言模型。Apple 另有使用 Apple Intelligence 的 `highFidelity` 翻译策略，本项目尚未启用或对其做效果/延迟对照。参见 [SpeechAnalyzer 官方介绍](https://developer.apple.com/videos/play/wwdc2025/277/)、[lowLatency](https://developer.apple.com/documentation/translation/translationsession/strategy/lowlatency) 和 [highFidelity](https://developer.apple.com/documentation/translation/translationsession/strategy/highfidelity)。
-
-模型由 Apple 下载和管理，不随源码分发，Apple 未通过这些 API 提供可选择的权重版本。下载资源需要网络；本地模式不调用豆包、不上传音频或文字，不会偷偷回退到付费服务。翻译质量与豆包不同，数字、姓名和术语必须核对。
-
-## 使用边界与隐私
-
-- 目前仅英语 → 简体中文。来源标签表示采音通道，不代表本人声纹；附近较响的人声也可能被麦克风收录。
-- 可调麦克风门限、系统语音处理和参考回声消除用于减少干扰，不能保证只保留本人声音或零漏译。
-- 暂停/继续属于同一份记录。历史字幕由新到旧显示，文档按会议顺序保存；只保存实际收到的文字，缺译和未定稿有明确提示。
-- 用户文件夹仅生成 Markdown；异常退出恢复使用 App 私有目录中的临时检查点，成功结束后移除。旧版本 JSON 原件移入私有备份，旧 Markdown 留在原处。
-- 本项目无账号、广告或遥测。豆包模式会将所选音频发送给火山引擎；费用及服务端数据处理遵循你的服务账号条款。
-- 使用前向会议参与者说明采音和翻译；选择 iCloud、共享盘等存档目录时，文件会按该目录自己的同步规则处理。
-
-完整说明见 [隐私说明](PRIVACY.md)。不要在 Issue 中发送密钥、未脱敏会议记录或诊断文件。
-
-## 开发与发布
-
-```sh
-swift test --package-path native --scratch-path .build-talkfloat
-python3 scripts/check-repository.py
-python3 scripts/check-repository.py --history
-```
-
-- [架构与数据流](docs/architecture.md)
-- [构建、测试与清理](docs/development.md)
-- [贡献说明](CONTRIBUTING.md)
-- [发布方案：直接下载、Homebrew、Mac App Store](docs/distribution.md)
-- [安全问题反馈](SECURITY.md)
-
-目前是开发者预览版；作者于 2026-11-03 明确选择暂时保留私有仓库，MIT 与源码安装准备保留，公开需作者后续另行决定。没有公开安装包、Homebrew Cask 或 App Store 版本。公开源码与发布公证成品是两个步骤：0.8.4 成品已签名并公证，面向公众发布前仍需全新 Mac 验收和明确公开下载入口。不要把开发签名 ZIP 当作已公证产品分发。
+[隐私说明](PRIVACY.md) · [源码构建](docs/development.md) · [架构](docs/architecture.md) · [反馈问题](https://github.com/jinhan261/talkfloat/issues)
 
 ## 许可证
 
-应用代码采用 [MIT](LICENSE)。SpeexDSP 保留其 [BSD 许可证](native/Sources/SpeexDSP/COPYING)，来源和版本见 [ORIGIN.md](native/Sources/SpeexDSP/ORIGIN.md)，两份许可证均随 App 打包。Apple 框架与语言模型、豆包服务不属于本项目的 MIT 授权范围。
+应用代码采用 [MIT](LICENSE)，SpeexDSP 保留其 [BSD 许可证](native/Sources/SpeexDSP/COPYING)。Apple 语言模型和豆包服务遵循各自条款，不随项目分发。

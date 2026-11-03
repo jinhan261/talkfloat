@@ -27,6 +27,12 @@ final class ProtocolTests:XCTestCase {
         let response=try ASTEvent(data:data)
         XCTAssertEqual(response.type,654);XCTAssertEqual(response.text,"你好")
     }
+    func testOversizedResponseIntegersThrowInsteadOfCrashing() {
+        for field in [2,5,6] {
+            XCTAssertThrowsError(try ASTEvent(data:Proto.number(field,UInt64.max)))
+        }
+        XCTAssertThrowsError(try ASTEvent(data:Proto.bytes(1,Proto.number(3,UInt64.max))))
+    }
     func testPartialAndFinalDoNotDuplicate() throws {
         var state=CaptionState()
         func event(_ type:Int,_ text:String="")throws->ASTEvent{try ASTEvent(data:Proto.number(2,UInt64(type))+Proto.string(4,text))}

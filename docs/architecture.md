@@ -1,6 +1,6 @@
 # TalkFloat 架构
 
-更新：2026-11-03 · 0.8.2。采用 Swift Package；AppKit 管理菜单栏和窗口，SwiftUI 绘制内容。保持系统声与麦克风两条独立的音频、识别和字幕时间线。
+更新：2026-11-03 · 0.8.5。采用 Swift Package；AppKit 管理菜单栏和窗口，SwiftUI 绘制内容。保持系统声与麦克风两条独立的音频、识别和字幕时间线。
 
 ```mermaid
 flowchart TD

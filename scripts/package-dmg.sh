@@ -2,7 +2,7 @@
 # Package the already-built app; never replace or re-sign an installed app.
 set -euo pipefail
 PROJECT_ROOT="${0:A:h:h}"
-APP_PATH="${TALKFLOAT_APP_PATH:-$PROJECT_ROOT/dist/TalkFloat.app}"
+APP_PATH="${TALKFLOAT_APP_PATH:-$PROJECT_ROOT/dist/Build.noindex/TalkFloat.app}"
 APP_PATH="${APP_PATH:A}"
 MODE="${1:-}"
 if [[ $# -ne 1 || ( "$MODE" != "--development" && "$MODE" != "--release" ) ]]; then
@@ -11,7 +11,7 @@ if [[ $# -ne 1 || ( "$MODE" != "--development" && "$MODE" != "--release" ) ]]; t
     exit 2
 fi
 if [[ ! -d "$APP_PATH" ]]; then
-    echo "Build dist/TalkFloat.app first, or set TALKFLOAT_APP_PATH to a signed app copy." >&2; exit 1
+    echo "Run scripts/build-app.sh first, or set TALKFLOAT_APP_PATH to a signed app copy." >&2; exit 1
 fi
 codesign --verify --deep --strict "$APP_PATH"
 APP_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_PATH/Contents/Info.plist")
