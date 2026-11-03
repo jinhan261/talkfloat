@@ -13,6 +13,12 @@ scripts/build-app.sh
 
 需要签名安装才能稳定检验系统录音权限和钥匙串读取。更换签名身份可能触发重新授权；在同一开发机上应显式固定原身份。当前打包用于本机试用，未做 Developer ID 公证与公开分发。
 
+### DMG 打包
+
+已有 `dist/TalkFloat.app` 后运行 `scripts/package-dmg.sh --development`，得到带 `-development.dmg` 后缀的开发预览及 SHA256 文件。内容仅有签名 App、Applications 链接及安装说明；不打包本机会议记录、模型、密钥、诊断文件。脚本核对签名和 arm64、拒绝覆盖已有产物、校验镜像并自动清理项目内临时打包目录，不重签或替换已安装 App。
+
+正式模式为 `scripts/package-dmg.sh --release`：需要源 App 已有 Developer ID Application 签名，并设置同类 `TALKFLOAT_SIGN_IDENTITY` 和已配置的 `TALKFLOAT_NOTARY_PROFILE`。它给 DMG 签名，提交公证，验证 Accepted 后绑定票据并检查 Gatekeeper，最后生成 SHA256。不会自动创建证书、索取密码或上传 GitHub Release。当前开发证书不能走正式模式；公证分支尚未真实执行，需取得证书/配置后验证。详细顺序见发布文档。
+
 ## 自动与实机验证
 
 单元测试覆盖协议编码、两路字幕配对、暂停后历史、存档修订、疑似回声、门限、布局与发送策略。DSP 样本是合成信号；`native/Tests/Fixtures` 中英语素材由 macOS `say` 生成，不是会议录音。
@@ -40,7 +46,7 @@ git diff --cached --stat
 
 上传前还需人工审阅新增文本。扫描器检查 Git index 的范围、常见凭据格式、绝对用户路径；不能检测所有无前缀 Token。禁止提交真实文字记录、测试日志、截图、个人配置和密钥。历史原型及本机产品决策资料保留在开发机。
 
-完成开发、构建与测试后，核实本项目 `.build-talkfloat`、`native/.build` 以及有项目归属证据的 DerivedData/临时打包目录，再清理旧缓存。保留源代码、签名 App、版本 ZIP、当前 dSYM、已安装 App 和 App 数据。禁止笼统清空全部 DerivedData。
+完成开发、构建与测试后，核实本项目 `.build-talkfloat`、`native/.build` 以及有项目归属证据的 DerivedData/临时打包目录，再清理旧缓存。保留源代码、签名 App、版本 ZIP/DMG、当前 dSYM、已安装 App 和 App 数据。禁止笼统清空全部 DerivedData。
 
 ## 引擎对照
 
@@ -51,6 +57,8 @@ git diff --cached --stat
 ## TalkFloat 改名兼容
 
 0.8.0 对外名称、可执行文件、App/ZIP 和错误提示均为 TalkFloat。为了沿用已有授权、偏好和记录，Bundle ID `app.saylori.mac`、钥匙串 service `app.saylori.credentials`、内部通知名以及 `Saylori/Recordings` 保持稳定；源码的 SayloriCore 模块名同样保留。SPM 主可执行目标改为 TalkFloat，源文件目录通过 path 显式指定。后续若改这些持久化标识，必须先实施并验证迁移。
+
+2026-11-03 按用户要求将 GitHub 仓库从 `jinhan261/saylori` 改为 `jinhan261/talkfloat`，README 和当前 Git remote 同步。此为同一仓库改名，历史和 private 状态保留；不改变上述 App 持久化身份，也不移动开发者现有工作目录。
 
 ## 品牌图标
 

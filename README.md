@@ -9,6 +9,12 @@
 
 Swift + SwiftUI / AppKit，Apple Silicon。现名 TalkFloat，原名 Saylori；旧应用身份、偏好、钥匙串和默认记录目录保持兼容。
 
+## DMG 安装（准备中）
+
+普通用户将优先通过 [GitHub Releases](https://github.com/jinhan261/talkfloat/releases) 下载 `.dmg`，打开后把 TalkFloat 拖入 Applications，再从菜单栏使用；不需要 Xcode。**目前尚未发布正式安装包**：仓库仍是私有，本机只有开发签名，尚未完成 Developer ID 分发签名、Apple 公证和全新 Mac 验收。
+
+已提供可重复的 DMG 打包脚本。带 `-development.dmg` 的文件仅用于打包验收，不要当作已公证成品发给普通用户。正式发布步骤见 [发布说明](docs/distribution.md)。
+
 ## 从源码安装
 
 需要完整 Xcode 与 Command Line Tools，SDK 必须包含 macOS 26.4 的 Speech / Translation API。本项目实际构建环境为 Swift 6.4.2 / macOS 27 SDK。首次使用 Xcode 请完成其正常初始化。
@@ -16,8 +22,8 @@ Swift + SwiftUI / AppKit，Apple Silicon。现名 TalkFloat，原名 Saylori；�
 仓库公开后，任何人都可运行以下命令；当前私有阶段需要仓库访问权限：
 
 ```sh
-git clone https://github.com/jinhan261/saylori.git
-cd saylori
+git clone https://github.com/jinhan261/talkfloat.git
+cd talkfloat
 scripts/install-local.sh --ad-hoc
 ```
 

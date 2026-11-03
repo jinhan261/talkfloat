@@ -2,6 +2,8 @@
 
 核查日期：2026-11-03。范围：原生 macOS 菜单栏英中字幕工具。本文是发布方案；当前没有公开仓库、Release、Homebrew 包或 App Store 上架。
 
+同日用户要求将仓库名统一为 TalkFloat，并希望通过 DMG 简化安装。已将同一仓库改为 [jinhan261/talkfloat](https://github.com/jinhan261/talkfloat)，保留 private 和提交历史；本地 remote 与源码安装地址已同步。优先准备 DMG 直发，不因此自动公开源码或发布未公证成品。来源：用户当前决定；适用当前仓库与站外分发；用户明确公开或取得正式签名条件后再推进发布。
+
 ## 推荐顺序
 
 先完成 **Developer ID 签名与公证 → GitHub Releases 下载 → 自建 Homebrew Tap**，验证新用户安装和长期稳定性，再做 Mac App Store。是否开源是另一项决定：二进制下载、Homebrew 和 App Store 均不以开源为前提。
@@ -26,6 +28,7 @@
 | 隐私 | 模式说明、采音状态、无录音落盘；本地保存中英文本；豆包模式上传所选音频 | 首次云端使用明确说明接收方并征得同意；提供隐私政策、记录删除/保留设置和商店隐私填写 |
 | 身份与升级 | 沿用 app.saylori.mac、钥匙串 service 与 Saylori/Recordings | 保持稳定，避免品牌改名触发数据分裂；若正式更换身份，先做迁移与旧安装升级测试 |
 | 更新 | 无应用内更新器 | 首版可以手动下载 / brew upgrade；后续给直发版增加可信更新流程，商店版使用商店更新 |
+| DMG | 已有开发预览打包脚本：App + Applications 链接 + 安装说明；生成独立 SHA256 | 开发包明确标注 development；正式模式需 Developer ID 与已配置的公证凭据，仍待真实公证和全新 Mac 验收 |
 | 质量边界 | 音量门限不是声纹识别；本地与豆包不承诺相同质量；已知仍可能误收附近人声 | 对外准确写支持范围，不宣传“只识别本人”“零漏译”或未经验证的延迟数字 |
 
 ## 路线一：直接下载与 Homebrew
@@ -39,6 +42,30 @@ Apple 的正式站外分发流程使用 Developer ID Application 和公证；公
 3. 在另一台未安装过的 Mac 验证 Gatekeeper、首次权限、模型准备和字幕；不能让用户关闭 Gatekeeper 或删除 quarantine 来代替签名公证。
 4. 发布固定版本附件与 SHA256。源码可独立决定是否公开，也可以创建只放安装包和问题反馈的公开 releases 仓库。
 5. 建立例如 `jinhan261/homebrew-tap`，提交 `Casks/talkfloat.rb`。使用固定版本 URL、真实 SHA256、`app "TalkFloat.app"` 和明确的平台限制。升级只更新版本、URL、哈希，不删除用户存档。
+
+### DMG 的当前可执行步骤
+
+本机现有的 0.8.4 App 使用 Apple Development 签名，签名本身验证通过，但 Gatekeeper 评估拒绝，且没有 stapled ticket。本机未找到可用 Developer ID Application 身份。**把它装进 DMG 并不会改变这个信任状态。** 当前可生成开发预览来检查安装文件结构：
+
+```sh
+scripts/package-dmg.sh --development
+```
+
+文件名带 `-development.dmg`，仅用于打包验收，不创建 GitHub Release。正式发布者先取得 Developer ID Application 身份，并通过 Apple 官方流程将公证凭据保存为本机 notarytool Keychain profile；不要把密码或私钥写进仓库。随后：
+
+```sh
+# 身份为 Developer ID Application，profile 为已配置的钥匙串配置名。
+export TALKFLOAT_SIGN_IDENTITY='你的 Developer ID Application 证书 SHA-1'
+export TALKFLOAT_NOTARY_PROFILE='你的公证配置名'
+scripts/build-app.sh
+scripts/package-dmg.sh --release
+```
+
+正式模式只接受 Developer ID 签名的 App，给镜像签名后提交公证；只有 Accepted、票据绑定和 Gatekeeper 检查都通过，才输出正式命名的 DMG 和 SHA256。当前仅验证开发路径及拒绝错误签名的检查，尚未执行真实公证。脚本不替换正在使用的安装版，也不发布 GitHub Release；全新 Mac 首装与旧版升级仍需单独验收。
+
+通过验收后，把 `.dmg` 和 `.dmg.sha256` 作为 Release 附件，用户下载 DMG、拖到 Applications、从菜单栏使用即可。GitHub 自动附带的 “Source code” ZIP 是源码，不是安装包。[GitHub Releases 说明](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
+
+当前私有仓库的 Releases 也仅对有仓库读取权限的人可见。让任何人下载有两个独立选择：明确授权公开当前仓库，或保持源码私有并另建公开的安装包下载入口；本轮均未执行。
 
 **下列是发布后的目标命令，目前尚不可用：**
 
