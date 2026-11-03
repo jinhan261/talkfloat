@@ -70,7 +70,7 @@ python3 scripts/check-repository.py --history
 - [发布方案：直接下载、Homebrew、Mac App Store](docs/distribution.md)
 - [安全问题反馈](SECURITY.md)
 
-目前是开发者预览版；没有公开安装包、Homebrew Cask 或 App Store 版本。公开源码与发布公证成品是两个步骤：普通用户的成品安装仍需 Developer ID 签名、公证和全新 Mac 验收。不要把开发签名 ZIP 当作已公证产品分发。
+目前是开发者预览版；作者于 2026-11-03 明确选择暂时保留私有仓库，MIT 与源码安装准备保留，公开需作者后续另行决定。没有公开安装包、Homebrew Cask 或 App Store 版本。公开源码与发布公证成品是两个步骤：普通用户的成品安装仍需 Developer ID 签名、公证和全新 Mac 验收。不要把开发签名 ZIP 当作已公证产品分发。
 
 ## 许可证
 
