@@ -2,12 +2,56 @@ import SwiftUI
 import AppKit
 import SayloriCore
 
+struct MicrophoneSection:View {
+    @ObservedObject var model:SessionModel
+    @State var expanded=false
+    var body:some View {
+        VStack(spacing:0){
+            HStack(spacing:10){
+                InputGlyph(symbol:"mic",enabled:model.microphoneEnabled,tint:Brand.microphone)
+                VStack(alignment:.leading,spacing:4){
+                    Text("麦克风声音").font(.system(size:12,weight:.medium))
+                    Text(model.microphoneEnabled ? (model.microphoneBusy ? "正在连接…":model.microphoneDevice):"同时翻译你的英语发言")
+                        .font(.system(size:11)).foregroundStyle(.secondary).lineLimit(1)
+                }
+                Spacer(minLength:4)
+                Toggle("麦克风声音",isOn:Binding(get:{model.microphoneEnabled},set:{model.setMicrophone($0)})).labelsHidden()
+                    .toggleStyle(.switch).controlSize(.mini).disabled(model.busy || model.microphoneBusy)
+            }.padding(12).help("跟随 macOS 当前输入设备；语音突显可减少背景声音。")
+            if model.microphoneEnabled {
+                Button{expanded.toggle()}label:{
+                    HStack(spacing:6){
+                        Text("背景声过滤")
+                        Spacer(minLength:4)
+                        Text(expanded ? "收起":(model.microphoneNearField ? "\(Int(model.microphoneThresholdDB.rounded())) dB":"已关闭")).monospacedDigit()
+                        Image(systemName:expanded ? "chevron.up":"chevron.down").font(.system(size:9,weight:.medium))
+                    }.font(.system(size:11)).foregroundStyle(.secondary).frame(minHeight:26).contentShape(Rectangle())
+                }.buttonStyle(QuietButtonStyle()).padding(.leading,46).padding(.trailing,12).padding(.bottom,expanded ? 4:10)
+                    .accessibilityLabel("调节背景声过滤").accessibilityValue(expanded ? "已展开":"已收起")
+                if expanded {
+                    MicrophoneFilterView(model:model)
+                    HStack(spacing:6){
+                        Text(model.microphoneProcessingLabel).font(.system(size:11)).foregroundStyle(.secondary)
+                        Spacer(minLength:4)
+                        if model.microphoneReady {
+                            Button(model.microphoneIsolationActive ? "调整":"开启"){model.showMicrophoneModes()}
+                                .buttonStyle(.plain).font(.system(size:11,weight:.medium)).foregroundStyle(Brand.accent)
+                                .accessibilityLabel("打开系统语音突显设置")
+                        }
+                    }.padding(.leading,46).padding(.trailing,12).padding(.bottom,12)
+                        .help("使用 macOS 语音突显抑制背景声音；它不是本人声纹识别。")
+                }
+            }
+        }
+    }
+}
+
 struct MicrophoneFilterView:View {
     @ObservedObject var model:SessionModel
     var body:some View {
         VStack(alignment:.leading,spacing:8){
             HStack {
-                Text("背景声过滤").font(.system(size:11,weight:.medium))
+                Text("过滤小声背景音").font(.system(size:11,weight:.medium))
                 Spacer()
                 Toggle("背景声过滤",isOn:$model.microphoneNearField)
                     .labelsHidden().toggleStyle(.switch).controlSize(.mini)
@@ -17,11 +61,11 @@ struct MicrophoneFilterView:View {
                     Text("过滤门限").foregroundStyle(.secondary)
                     Spacer()
                     Text("\(model.microphoneThresholdDB.formatted(.number.precision(.fractionLength(0...1)))) dB").monospacedDigit().foregroundStyle(.secondary)
-                }.font(.system(size:10.5))
+                }.font(.system(size:11))
                 MicrophoneThresholdSlider(value:$model.microphoneThresholdDB).frame(height:18)
                     .help("向右提高门限，过滤更多小声讲话；你的声音收不到时向左调。数值是处理后麦克风的 dBFS，不是环境声压分贝。")
                 HStack {Text("宽松");Spacer();Text("严格")}
-                    .font(.system(size:10)).foregroundStyle(.secondary).padding(.top,-4)
+                    .font(.system(size:11)).foregroundStyle(.secondary).padding(.top,-4)
                 if model.microphoneReady {
                     Canvas{context,size in
                         let y=(size.height-4)/2
@@ -36,13 +80,13 @@ struct MicrophoneFilterView:View {
                         Text(model.microphoneRMSDB < -60 ? "低于 −60 dB":"\(Int(model.microphoneRMSDB.rounded())) dB").monospacedDigit()
                         Spacer(minLength:2)
                         Text(model.microphoneGateLabel)
-                    }.font(.system(size:10.5)).foregroundStyle(.secondary)
+                    }.font(.system(size:11)).foregroundStyle(.secondary)
                         .accessibilityElement(children:.combine)
                 }else{
-                    Text("开始后显示实时音量").font(.system(size:10.5)).foregroundStyle(.secondary)
+                    Text("开始后显示实时音量").font(.system(size:11)).foregroundStyle(.secondary)
                 }
             }
-        }.padding(.leading,50).padding(.trailing,12).padding(.bottom,12)
+        }.padding(.leading,46).padding(.trailing,12).padding(.bottom,12)
             .help("低于门限的声音不进入识别，发言起止有短暂保护。门限不能区分同样响亮的两个人。")
     }
 }

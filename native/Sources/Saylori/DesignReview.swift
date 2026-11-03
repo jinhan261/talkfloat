@@ -18,6 +18,7 @@ import SayloriCore
             model.phase = .idle;model.showingSettings=false
             model.mode = .local
             export(PanelView(model:model),name:"\(name)-menu",scheme:scheme,directory:directory)
+            export(MicrophoneSection(model:model,expanded:true).modifier(CardSurface()).padding(Brand.inset).frame(width:Brand.width).background(Brand.surface),name:"\(name)-microphone-expanded",scheme:scheme,directory:directory)
             model.mode = .doubao
             export(PanelView(model:model),name:"\(name)-menu-doubao",scheme:scheme,directory:directory)
             model.mode = .local
@@ -31,6 +32,7 @@ import SayloriCore
             export(PanelView(model:model),name:"\(name)-live",scheme:scheme,directory:directory)
             model.microphoneRMSDB = -22;model.microphonePassing=true
             export(PanelView(model:model),name:"\(name)-microphone-passing",scheme:scheme,directory:directory)
+            export(MicrophoneSection(model:model,expanded:true).modifier(CardSurface()).padding(Brand.inset).frame(width:Brand.width).background(Brand.surface),name:"\(name)-microphone-expanded-live",scheme:scheme,directory:directory)
             model.phase = .failed;model.notice="本地语音识别已停止，请重新开始。"
             export(PanelView(model:model),name:"\(name)-error",scheme:scheme,directory:directory)
             model.notice="";model.phase = .paused

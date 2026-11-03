@@ -10,10 +10,10 @@ struct SourcePicker:View {
         VStack(spacing:0){
             Button{highlighted=model.source.id;expanded.toggle()}label:{
                 HStack(spacing:10){
-                    InputGlyph(symbol:model.source.id=="system" ? "speaker.wave.2.fill":"macwindow")
+                    InputGlyph(symbol:model.source.id=="system" ? "speaker.wave.2":"macwindow")
                     VStack(alignment:.leading,spacing:4){
-                        Text("电脑声音").font(.system(size:12,weight:.medium))
-                        Text(model.source.name).font(.system(size:10.5)).foregroundStyle(.secondary).lineLimit(1)
+                        Text("系统声音").font(.system(size:12,weight:.medium))
+                        Text(model.source.name).font(.system(size:11)).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer()
                     Image(systemName:expanded ? "chevron.up":"chevron.down").font(.system(size:9,weight:.semibold)).foregroundStyle(.tertiary)
@@ -27,7 +27,7 @@ struct SourcePicker:View {
             ForEach(model.sources){item in
                 Button{select(item)}label:{
                     HStack(spacing:9){
-                        Image(systemName:item.id=="system" ? "speaker.wave.2.fill":"macwindow").frame(width:16)
+                        Image(systemName:item.id=="system" ? "speaker.wave.2":"macwindow").frame(width:16)
                         Text(item.name).font(.system(size:11.5))
                         Spacer()
                         Image(systemName:"checkmark").font(.system(size:10,weight:.semibold)).opacity(item==model.source ? 1:0)

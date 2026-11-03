@@ -51,3 +51,7 @@ git diff --cached --stat
 ## TalkFloat 改名兼容
 
 0.8.0 对外名称、可执行文件、App/ZIP 和错误提示均为 TalkFloat。为了沿用已有授权、偏好和记录，Bundle ID `app.saylori.mac`、钥匙串 service `app.saylori.credentials`、内部通知名以及 `Saylori/Recordings` 保持稳定；源码的 SayloriCore 模块名同样保留。SPM 主可执行目标改为 TalkFloat，源文件目录通过 path 显式指定。后续若改这些持久化标识，必须先实施并验证迁移。
+
+## 品牌图标
+
+`BrandArtwork.swift` 是菜单标志与 App 图标的共用轮廓。打包脚本在生成 icns 前调用可执行文件的 `--render-brand-icon` 入口，将确定性的纯色 PNG 输出到 `native/Resources/AppIcon.png`；此入口不启动窗口、采音或读取钥匙串。0.8.1 使用石墨色底与浅色字幕标志，原 imagegen 选定方案作为形状来源。

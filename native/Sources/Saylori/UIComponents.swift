@@ -6,22 +6,28 @@ enum Brand {
     static let width:CGFloat=336
     static let inset:CGFloat=16
     static let radius:CGFloat=12
-    // Dark teal keeps white primary-button labels readable in either appearance.
-    static let action=Color(red:34/255,green:121/255,blue:106/255)
+    // Neutral brand surfaces; blue is reserved for selection, focus and feedback.
+    static let action=neutral(0.16,0.88)
+    static let actionInk=neutral(0.99,0.12)
     static let accentNS=NSColor(name:nil){appearance in
         appearance.bestMatch(from:[.darkAqua,.aqua]) == .darkAqua
-            ? NSColor(srgbRed:0.40,green:0.80,blue:0.71,alpha:1)
-            : NSColor(srgbRed:34/255,green:121/255,blue:106/255,alpha:1)
+            ? NSColor(srgbRed:112/255,green:171/255,blue:242/255,alpha:1)
+            : NSColor(srgbRed:0,green:102/255,blue:204/255,alpha:1)
     }
     static let accent=Color(nsColor:accentNS)
-    static let mark=accent
+    static let mark=Color.primary
+    static let microphone=Color(nsColor:NSColor(name:nil){appearance in
+        appearance.bestMatch(from:[.darkAqua,.aqua]) == .darkAqua
+            ? NSColor(srgbRed:0.84,green:0.68,blue:0.45,alpha:1)
+            : NSColor(srgbRed:0.55,green:0.36,blue:0.17,alpha:1)
+    })
     static func neutral(_ light:CGFloat,_ dark:CGFloat)->Color {
         Color(nsColor:NSColor(name:nil){$0.bestMatch(from:[.darkAqua,.aqua]) == .darkAqua ? NSColor(white:dark,alpha:1):NSColor(white:light,alpha:1)})
     }
-    static let surface=neutral(0.965,0.105)
-    static let card=neutral(1,0.155)
-    static let field=neutral(1,0.12)
-    static let selectionTrack=neutral(0.925,0.085)
+    static let surface=neutral(0.968,0.115)
+    static let card=neutral(0.99,0.15)
+    static let field=neutral(0.99,0.13)
+    static let selectionTrack=neutral(0.925,0.09)
     static let rowFill=Color.primary.opacity(0.045)
     static let border=Color.primary.opacity(0.075)
 }
@@ -35,11 +41,11 @@ struct CardSurface:ViewModifier {
 struct InputGlyph:View {
     let symbol:String
     var enabled=true
+    var tint:Color = .secondary
     var body:some View {
-        Image(systemName:symbol).font(.system(size:13,weight:.medium))
-            .foregroundStyle(enabled ? Brand.accent:Color.secondary)
-            .frame(width:28,height:28)
-            .background(enabled ? Brand.accent.opacity(0.09):Brand.rowFill,in:RoundedRectangle(cornerRadius:8,style:.continuous))
+        Image(systemName:symbol).font(.system(size:14,weight:.regular))
+            .foregroundStyle(enabled ? tint:Color.secondary)
+            .frame(width:24,height:28)
     }
 }
 struct PanelIcon:View {
@@ -70,8 +76,8 @@ struct PanelActionStyle:ButtonStyle {
     var primary=false
     @Environment(\.isEnabled) private var enabled
     func makeBody(configuration:Configuration)->some View {
-        configuration.label.font(.system(size:12.5,weight:.semibold)).frame(minHeight:38)
-            .foregroundStyle(primary ? Color.white:Color.primary)
+        configuration.label.font(.system(size:12.5,weight:.medium)).frame(minHeight:38)
+            .foregroundStyle(primary ? Brand.actionInk:Color.primary)
             .background(primary ? Brand.action:Brand.card,in:RoundedRectangle(cornerRadius:10,style:.continuous))
             .overlay(RoundedRectangle(cornerRadius:10,style:.continuous).strokeBorder(primary ? .clear:Brand.border,lineWidth:0.5))
             .overlay(RoundedRectangle(cornerRadius:10).fill(Color.black.opacity(configuration.isPressed ? 0.10:0)))
@@ -88,10 +94,10 @@ struct ChoiceStrip<Value:Hashable>:View {
             ForEach(options.indices,id:\.self){index in
                 let option=options[index]
                 Button{selection=option.0;focused=option.0}label:{
-                    Text(option.1).font(.system(size:11.5,weight:selection==option.0 ? .semibold:.regular))
+                    Text(option.1).font(.system(size:11.5,weight:selection==option.0 ? .medium:.regular))
                         .frame(maxWidth:.infinity).frame(height:28)
                         .background(selection==option.0 ? Brand.card:Color.clear,in:RoundedRectangle(cornerRadius:7,style:.continuous))
-                        .shadow(color:selection==option.0 ? .black.opacity(0.06):.clear,radius:2,y:1)
+                        .overlay(RoundedRectangle(cornerRadius:7).strokeBorder(selection==option.0 ? Brand.border:Color.clear,lineWidth:0.5))
                 }.buttonStyle(QuietButtonStyle()).focusable().focusEffectDisabled().focused($focused,equals:option.0)
                     .overlay(RoundedRectangle(cornerRadius:7).strokeBorder(focused==option.0 ? Brand.accent:Color.clear,lineWidth:1.5).allowsHitTesting(false))
                     .onKeyPress(.leftArrow){moveSelection(from:index,by:-1);return .handled}
@@ -110,5 +116,5 @@ struct ChoiceStrip<Value:Hashable>:View {
 }
 struct SectionLabel:View {
     let title:String
-    var body:some View {Text(title).font(.system(size:10.5,weight:.medium)).foregroundStyle(Color.secondary).padding(.leading,2)}
+    var body:some View {Text(title).font(.system(size:11,weight:.medium)).foregroundStyle(Color.secondary).padding(.leading,2)}
 }

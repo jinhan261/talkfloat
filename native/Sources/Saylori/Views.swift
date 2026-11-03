@@ -14,47 +14,24 @@ struct PanelView:View {
             if model.showingSettings {SettingsView(model:model)}else{
                 HStack(spacing:8){
                     Text("英语").foregroundStyle(.secondary)
-                    Image(systemName:"arrow.right").font(.system(size:10,weight:.medium)).foregroundStyle(.tertiary)
+                    Image(systemName:"arrow.right").font(.system(size:11,weight:.medium)).foregroundStyle(.tertiary)
                     Text("简体中文")
                     Spacer()
-                    Text("实时字幕").font(.system(size:10.5)).foregroundStyle(.secondary)
+                    Text("实时字幕").font(.system(size:11)).foregroundStyle(.secondary)
                 }.font(.system(size:13,weight:.medium)).padding(.horizontal,2)
                     .accessibilityElement(children:.combine)
                 VStack(alignment:.leading,spacing:7){
                     ChoiceStrip(title:"翻译模式",options:[(TranslationMode.local,"本地免费"),(.doubao,"豆包云端")],selection:Binding(get:{model.mode},set:{model.setMode($0)}))
                         .disabled(model.active || model.hasMeeting)
                         .help(model.active || model.hasMeeting ? "结束本次会议后可切换翻译模式":"本地免费，豆包按服务用量计费")
-                    Text(model.mode.detail).font(.system(size:10.5)).foregroundStyle(.secondary)
+                    Text(model.mode.detail).font(.system(size:11)).foregroundStyle(.secondary)
                         .fixedSize(horizontal:false,vertical:true).padding(.horizontal,2)
                 }
                 VStack(spacing:0){
                     SourcePicker(model:model).disabled(model.active || model.hasMeeting)
                         .help(model.active || model.hasMeeting ? "结束本次会议后可切换音源":"选择收听的应用")
-                    Divider().padding(.leading,50).padding(.trailing,12)
-                    HStack(spacing:10){
-                        InputGlyph(symbol:"mic.fill",enabled:model.microphoneEnabled)
-                        VStack(alignment:.leading,spacing:4){
-                            Text("麦克风声音").font(.system(size:12,weight:.medium))
-                            Text(model.microphoneEnabled ? (model.microphoneBusy ? "正在连接…":model.microphoneDevice):"同时翻译我的英语发言")
-                                .font(.system(size:10.5)).foregroundStyle(.secondary).lineLimit(1)
-                        }
-                        Spacer(minLength:4)
-                        Toggle("麦克风声音",isOn:Binding(get:{model.microphoneEnabled},set:{model.setMicrophone($0)})).labelsHidden()
-                            .toggleStyle(.switch).controlSize(.mini).disabled(model.busy || model.microphoneBusy)
-                    }.padding(12).help("跟随 macOS 当前输入设备；语音突显可减少背景声音。")
-                    if model.microphoneEnabled {
-                        MicrophoneFilterView(model:model)
-                        HStack(spacing:6){
-                            Text(model.microphoneProcessingLabel).font(.system(size:10.5)).foregroundStyle(.secondary)
-                            Spacer(minLength:4)
-                            if model.microphoneReady {
-                                Button(model.microphoneIsolationActive ? "调整":"开启"){model.showMicrophoneModes()}
-                                    .buttonStyle(.plain).font(.system(size:10.5,weight:.medium)).foregroundStyle(Brand.accent)
-                                    .accessibilityLabel("打开系统语音突显设置")
-                            }
-                        }.padding(.leading,50).padding(.trailing,12).padding(.bottom,12)
-                            .help("使用 macOS 语音突显抑制背景声音；它不是本人声纹识别。")
-                    }
+                    Divider().padding(.leading,46).padding(.trailing,12)
+                    MicrophoneSection(model:model)
                 }.modifier(CardSurface())
                 if !model.notice.isEmpty{message(model.notice,error:model.phase == .failed)}
                 if !model.microphoneNotice.isEmpty{message(model.microphoneNotice,error:true)}
@@ -75,14 +52,14 @@ struct PanelView:View {
         HStack(spacing:8){
             if model.showingSettings {
                 PanelIcon(icon:"chevron.left",label:"返回"){model.showingSettings=false}
-                Text("设置").font(.system(size:14,weight:.semibold));Spacer()
+                Text("设置").font(.system(size:14,weight:.medium));Spacer()
             }else{
                 TalkFloatMark().fill(Brand.mark).frame(width:22,height:18).accessibilityHidden(true)
-                Text("TalkFloat").font(.system(size:14,weight:.semibold,design:.rounded))
+                Text("TalkFloat").font(.system(size:14,weight:.medium,design:.rounded))
                 Spacer()
                 HStack(spacing:5){
                     Circle().fill(model.phase == .live ? Brand.accent:(model.phase == .failed ? Color.red:Color.secondary.opacity(0.5))).frame(width:4,height:4)
-                    Text(stateText).font(.system(size:10.5)).foregroundStyle(.secondary)
+                    Text(stateText).font(.system(size:11)).foregroundStyle(.secondary)
                 }.accessibilityElement(children:.combine)
                 PanelIcon(icon:"gearshape",label:"设置"){model.showingSettings=true}
             }
@@ -117,7 +94,7 @@ struct PanelView:View {
                     Image(systemName:"clock.arrow.circlepath").font(.system(size:14)).foregroundStyle(.secondary).frame(width:24)
                     VStack(alignment:.leading,spacing:3){
                         Text("会议记录").font(.system(size:11.5,weight:.medium))
-                        Text("中英文字自动保存在本机").font(.system(size:10)).foregroundStyle(.secondary)
+                        Text("中英对照，自动存档").font(.system(size:11)).foregroundStyle(.secondary)
                     }
                 }.padding(.vertical,4).padding(.horizontal,2)
             }.buttonStyle(QuietButtonStyle()).help("打开本机中英记录；不保存录音")
@@ -157,9 +134,9 @@ struct SettingsView:View {
     private var appearance:some View {
         VStack(alignment:.leading,spacing:16){
             VStack(alignment:.leading,spacing:7){
-                HStack{Text("字幕预览").font(.system(size:10,weight:.medium));Spacer();Image(systemName:"captions.bubble").font(.system(size:12))}.opacity(0.55)
+                HStack{Text("字幕预览").font(.system(size:11,weight:.medium));Spacer();Image(systemName:"captions.bubble").font(.system(size:12))}.opacity(0.55)
                 Text("下周二上午十点见。").font(.system(size:model.fontSize*0.6,weight:.medium))
-                Text("See you next Tuesday at ten.").font(.system(size:10.5)).opacity(model.showSource ? 0.65:0)
+                Text("See you next Tuesday at ten.").font(.system(size:11)).opacity(model.showSource ? 0.65:0)
             }.padding(16).frame(maxWidth:.infinity,alignment:.leading).foregroundStyle(model.captionStyle.foreground)
                 .background(CaptionBackground(style:model.captionStyle,opacity:model.backgroundOpacity))
                 .clipShape(RoundedRectangle(cornerRadius:12,style:.continuous))
@@ -209,11 +186,11 @@ struct ConnectionSettings:View {
         VStack(alignment:.leading,spacing:16){
             HStack{
                 VStack(alignment:.leading,spacing:4){
-                    Text("豆包同声传译").font(.system(size:13,weight:.semibold))
-                    Text("声音用于翻译，不保存录音").font(.system(size:10.5)).foregroundStyle(.secondary)
+                    Text("豆包同声传译").font(.system(size:13,weight:.medium))
+                    Text("所选音频发送至豆包进行翻译").font(.system(size:11)).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Text(model.configured ? "已配置":"未配置").font(.system(size:10.5)).foregroundStyle(.secondary)
+                Text(model.configured ? "已配置":"未配置").font(.system(size:11)).foregroundStyle(.secondary)
             }
             VStack(alignment:.leading,spacing:12){
                 ChoiceStrip(title:"凭据类型",options:[(true,"App ID / Token"),(false,"API Key")],selection:$access.draft.legacy)
@@ -226,10 +203,10 @@ struct ConnectionSettings:View {
                     HStack(spacing:7){if model.connectionChecking{ProgressView().controlSize(.small)};Text(model.connectionChecking ? "正在检查…":(remember ? "保存并检查":"检查连接"))}.frame(maxWidth:.infinity)
                 }.buttonStyle(PanelActionStyle(primary:true)).disabled(model.active || !access.draft.trimmed.isValid)
                 Text(remember ? "保存到本机钥匙串。检查连接不上传声音。":"仅本次使用，不修改已存凭据。检查连接不上传声音。")
-                    .font(.system(size:10.5)).lineSpacing(2).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
+                    .font(.system(size:11)).lineSpacing(2).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
             }.padding(12).modifier(CardSurface())
             if !model.connectionResult.isEmpty{Text(model.connectionResult).font(.system(size:11)).fixedSize(horizontal:false,vertical:true).textSelection(.enabled)}
-            if !access.message.isEmpty{Text(access.message).font(.system(size:10.5)).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)}
+            if !access.message.isEmpty{Text(access.message).font(.system(size:11)).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)}
             HStack{
                 Button(access.working ? "正在读取…":"读取已存凭据"){Task{await access.load(interactive:true)}}.disabled(access.working || model.active)
                 Spacer()
@@ -242,12 +219,12 @@ struct ConnectionSettings:View {
                 Button("录屏与系统录音权限…"){NSWorkspace.shared.open(URL(string:"x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)}
             }.buttonStyle(.plain).font(.system(size:11)).foregroundStyle(Brand.accent)
             Text("中英文字保存在这台 Mac。即时预览可能会校正，会议记录以最终译文为准。")
-                .font(.system(size:10.5)).lineSpacing(2).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
+                .font(.system(size:11)).lineSpacing(2).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
         }.onDisappear{focus=nil}
     }
     private func field<V:View>(_ title:String,id:String,@ViewBuilder content:()->V)->some View {
         VStack(alignment:.leading,spacing:6){
-            Text(title).font(.system(size:10.5,weight:.medium)).foregroundStyle(.secondary)
+            Text(title).font(.system(size:11,weight:.medium)).foregroundStyle(.secondary)
             content().textFieldStyle(.plain).font(.system(size:12)).padding(.horizontal,10).frame(height:34)
                 .background(Brand.field,in:RoundedRectangle(cornerRadius:7))
                 .overlay(RoundedRectangle(cornerRadius:7).strokeBorder(focus==id ? Brand.accent:Brand.border,lineWidth:focus==id ? 1.5:0.5))

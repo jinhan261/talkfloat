@@ -21,12 +21,10 @@ struct CaptionView:View {
                 HStack(spacing:7){
                     Image(systemName:current?.audioOrigin.icon ?? "waveform").font(.system(size:11,weight:.medium))
                         .foregroundStyle(originTint(current?.audioOrigin ?? .system))
-                        .frame(width:24,height:24).background(ink.opacity(0.05),in:RoundedRectangle(cornerRadius:7))
+                        .frame(width:18,height:24)
                     Text(model.previewing ? "样式预览":(current?.audioOrigin.label ?? "英语 → 中文")).font(.system(size:11,weight:.medium))
                     Text(model.phase == .connecting ? "正在准备声音与字幕":(model.phase == .paused ? "已暂停":(current?.provisional == true ? (model.mode == .local ? "实时生成":"预览 · 待校正"):(current?.translationFinal == false ? "实时生成":""))))
-                        .font(.system(size:10)).opacity(0.6)
-                    Spacer(minLength:8)
-                    Image(systemName:"ellipsis").font(.system(size:12,weight:.medium)).opacity(0.35)
+                        .font(.system(size:11)).opacity(0.65).lineLimit(1)
                     Spacer(minLength:8)
                 }.foregroundStyle(ink.opacity(0.8)).frame(height:30)
                     .help(model.locked ? "位置已锁定":"按住文字或空白处拖动字幕窗")
@@ -50,18 +48,18 @@ struct CaptionView:View {
             }.frame(height:contentHeight(width:geometry.size.width-40,available:geometry.size.height)).id(current?.id)
             Rectangle().fill(ink.opacity(0.09)).frame(height:0.5)
             HStack {
-                Text("最近内容").font(.system(size:10.5,weight:.medium))
+                Text("最近内容").font(.system(size:11,weight:.medium))
                 Spacer()
-                Text(model.previewing ? "示例内容":"自动保存中英文字")
-                    .font(.system(size:10)).monospacedDigit()
-            }.foregroundStyle(ink.opacity(0.6))
+                Text(model.previewing ? "示例内容":"中英自动存档")
+                    .font(.system(size:11))
+            }.foregroundStyle(ink.opacity(0.65))
             ScrollViewReader{proxy in
                 ScrollView {
                     VStack(alignment:.leading,spacing:14){
                         if model.previewing {
                             contextRow(english:"Let's review the plan for next week.",chinese:"我们来过一下下周的计划。",pending:false,origin:.system)
                         }else if model.displayContext.isEmpty {
-                            Text("前文会保留在这里，方便接着读。").font(.system(size:13)).foregroundStyle(ink.opacity(0.4))
+                            Text("之前的发言会显示在这里。").font(.system(size:13)).foregroundStyle(ink.opacity(0.6))
                         }else{
                             ForEach(history){item in
                                 contextRow(english:item.source,chinese:item.translation,pending:!item.translationFinal,origin:item.audioOrigin)
@@ -99,13 +97,13 @@ struct CaptionView:View {
     }
     private func visibleHistory(size:CGSize)->[CaptionSegment] {
         let rows=model.displayContext
-        let width=max(100,size.width-72)
+        let width=max(100,size.width-64)
         func height(_ text:String,size:CGFloat)->Double {
-            let style=NSMutableParagraphStyle();style.lineSpacing=size>12 ? 3:2
+            let style=NSMutableParagraphStyle();style.lineSpacing=size>13 ? 3:2
             return ceil((text as NSString).boundingRect(with:NSSize(width:width,height:10000),options:[.usesLineFragmentOrigin,.usesFontLeading],attributes:[.font:NSFont.systemFont(ofSize:size),.paragraphStyle:style]).height)
         }
         let heights=rows.map { item in
-            16+height(item.translation.isEmpty ? "等待这段译文…":item.translation,size:15)+(model.showSource && !item.source.isEmpty ? 4+height(item.source,size:11.5):0)
+            18+height(item.translation.isEmpty ? "等待这段译文…":item.translation,size:16)+(model.showSource && !item.source.isEmpty ? 4+height(item.source,size:12.5):0)
         }
         let available=max(56,size.height-contentHeight(width:size.width-40,available:size.height)-126)
         // Fit the newest turns first, then display them from newest to oldest.
@@ -113,20 +111,20 @@ struct CaptionView:View {
         return Array(rows.suffix(CaptionHistoryLayout.visibleCount(heights:heights,available:available)).reversed())
     }
     private func originTint(_ origin:AudioOrigin)->Color {
-        if origin == .microphone{return model.captionStyle == .light ? Color(red:0.69,green:0.35,blue:0.13):Color(red:0.98,green:0.70,blue:0.42)}
-        return model.captionStyle == .light ? Brand.action:Color(red:0.40,green:0.80,blue:0.71)
+        if origin == .microphone{return model.captionStyle == .light ? Color(red:0.55,green:0.36,blue:0.17):Color(red:0.84,green:0.68,blue:0.45)}
+        return ink.opacity(0.72)
     }
     private func contextRow(english:String,chinese:String,pending:Bool,origin:AudioOrigin)->some View {
-        HStack(alignment:.top,spacing:10){
-            Image(systemName:origin.icon).font(.system(size:10,weight:.medium)).foregroundStyle(originTint(origin))
-                .frame(width:22,height:22).background(ink.opacity(0.045),in:RoundedRectangle(cornerRadius:6))
+        HStack(alignment:.top,spacing:8){
+            Image(systemName:origin.icon).font(.system(size:11,weight:.regular)).foregroundStyle(originTint(origin))
+                .frame(width:16,height:18)
             VStack(alignment:.leading,spacing:4){
                 HStack(spacing:6){
-                    Text(origin.label).font(.system(size:10,weight:.medium))
-                    if pending{Text("生成中").font(.system(size:9.5))}
-                }.foregroundStyle(ink.opacity(0.55))
-                Text(chinese.isEmpty ? "等待这段译文…":chinese).font(.system(size:15)).lineSpacing(3).foregroundStyle(ink.opacity(0.85))
-                if model.showSource && !english.isEmpty{Text(english).font(.system(size:11.5)).lineSpacing(2).foregroundStyle(ink.opacity(0.6))}
+                    Text(origin.label).font(.system(size:11,weight:.medium))
+                    if pending{Text("生成中").font(.system(size:11))}
+                }.foregroundStyle(ink.opacity(0.65))
+                Text(chinese.isEmpty ? "等待这段译文…":chinese).font(.system(size:16)).lineSpacing(3).foregroundStyle(ink.opacity(0.85))
+                if model.showSource && !english.isEmpty{Text(english).font(.system(size:12.5)).lineSpacing(2).foregroundStyle(ink.opacity(0.68))}
             }
         }.frame(maxWidth:.infinity,alignment:.leading)
     }

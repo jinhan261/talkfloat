@@ -5,7 +5,7 @@ enum CaptionStyle:String,CaseIterable,Identifiable {
     case glass,dark,light
     var id:String{rawValue}
     var title:String{switch self{case .glass:return "磨砂";case .dark:return "深色";case .light:return "浅色"}}
-    var foreground:Color{self == .light ? Color(white:0.10):.white}
+    var foreground:Color{self == .light ? Color(white:0.12):Color(white:0.96)}
 }
 
 struct CaptionBackground:View {
@@ -18,7 +18,7 @@ struct CaptionBackground:View {
                 FrostedSurface(opacity:opacity)
                 Color.black.opacity(0.70*opacity)
             }else{
-                (style == .light ? Color(white:0.98):Color(white:0.09))
+                (style == .light ? Color(white:0.98):Color(white:0.115))
                     .opacity(reduceTransparency ? 1:opacity)
             }
         }.allowsHitTesting(false)

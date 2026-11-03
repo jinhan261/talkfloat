@@ -6,6 +6,7 @@ cd "$PROJECT_ROOT"
 mkdir -p "$BUILD_ROOT" "$PROJECT_ROOT/dist"
 swift build --package-path native --scratch-path "$BUILD_ROOT" --arch arm64 -c release > "$BUILD_ROOT/release.log" 2>&1 || { tail -n 60 "$BUILD_ROOT/release.log"; exit 1; }
 BIN_DIR=$(swift build --package-path native --scratch-path "$BUILD_ROOT" --arch arm64 -c release --show-bin-path)
+"$BIN_DIR/TalkFloat" --render-brand-icon "$PROJECT_ROOT/native/Resources/AppIcon.png"
 APP_PATH="$PROJECT_ROOT/dist/TalkFloat.app"
 mkdir -p "$APP_PATH/Contents/MacOS" "$APP_PATH/Contents/Resources"
 cp "$BIN_DIR/TalkFloat" "$APP_PATH/Contents/MacOS/TalkFloat"

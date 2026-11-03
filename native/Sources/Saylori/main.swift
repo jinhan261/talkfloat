@@ -3,6 +3,11 @@ import AppKit
 // No WindowGroup or Settings scene is created, so launch never opens an empty window.
 @main @MainActor struct TalkFloatApp {
     static func main(){
+        if let index=CommandLine.arguments.firstIndex(of:"--render-brand-icon"),CommandLine.arguments.count>index+1 {
+            do{try TalkFloatArtwork.writeAppIcon(to:URL(fileURLWithPath:CommandLine.arguments[index+1]))}
+            catch{fputs("Could not export TalkFloat icon: \(error)\n",stderr);exit(1)}
+            return
+        }
         if let index=CommandLine.arguments.firstIndex(of:"--render-design"),CommandLine.arguments.count>index+1 {
             _ = NSApplication.shared
             NSApp.setActivationPolicy(.prohibited)
