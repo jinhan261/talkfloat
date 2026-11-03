@@ -66,3 +66,10 @@ Release 构建和稳定签名验证通过，检查了深浅色组件。两轮合
 按用户要求将同一 GitHub 仓库改为 `jinhan261/talkfloat`，仓库 ID、private 状态和历史保留。源码安装命令和当前 remote 已同步，持久化 App 身份不变。增加 DMG 打包脚本，开发模式有明确后缀与说明，正式模式检查 Developer ID 签名后才提交公证；不在打包过程中更改安装版、公开仓库或发布 Release。
 
 用已安装验收的 0.8.4 构建生成开发 DMG：镜像校验、只读挂载、Applications 链接、镜像内 App 完整文件对账与签名验证均通过，SHA256 文件一致。参数检查、开发签名拒绝进入正式模式、已有产物拒绝覆盖通过。所有临时打包与验证挂载目录已清理，成品保留。本轮没有重建 App 或重复音频测试；真实 Developer ID 公证分支与全新 Mac 首装尚未验证。现有 App 的 Gatekeeper 评估拒绝、无公证票据，因此开发 DMG 不作为正式分发包。
+
+
+## 正式签名与公证提交（2026-11-03）
+
+0.8.4 build36 的独立分发副本已使用 Developer ID Application 签名；深度严格校验、Hardened Runtime 和可信时间戳通过。动态依赖仅为系统框架和系统 Swift 库，无本机 Homebrew 或开发目录依赖。原安装版和开发归档保持原样。
+
+用户在本机配置 notarytool 钥匙串 profile 后，已实际验证可用并提交首个 DMG；Apple 当前返回 In Progress，未宣称公证或 Gatekeeper 已通过。私有 prerelease 草稿仍未发布、无附件。后续在 Accepted 后验收票据、镜像内容和 Gatekeeper；全新 Mac 首装、最低系统和升级覆盖仍单独待办。本轮没有修改应用代码或重跑音频测试。

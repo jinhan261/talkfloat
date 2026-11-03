@@ -4,7 +4,7 @@
 
 同日用户要求将仓库名统一为 TalkFloat，并希望通过 DMG 简化安装。已将同一仓库改为 [jinhan261/talkfloat](https://github.com/jinhan261/talkfloat)，保留 private 和提交历史；本地 remote 与源码安装地址已同步。优先准备 DMG 直发，不因此自动公开源码或发布未公证成品。来源：用户当前决定；适用当前仓库与站外分发；用户明确公开或取得正式签名条件后再推进发布。
 
-后续同日用户授权继续签名、公证和 DMG 发布准备。已创建私有的 `v0.8.4` Release 草稿（标为 prerelease，无附件），安装说明和使用边界已写入；尚未发布或改变可见性。222 个历史文本版本的常见敏感格式扫描无发现，不能替代完整安全审计。用户随后完成证书侧操作，本机已核验可用 Developer ID Application 身份；分发副本正在签名，公证凭据仍待配置，尚未提交公证。公证 Accepted 与新安装验收完成后才能添加正式附件。公开下载的入口与可见性仍需明确决定。
+后续同日用户授权继续签名、公证和 DMG 发布准备。已创建私有的 `v0.8.4` Release 草稿（标为 prerelease，无附件），安装说明和使用边界已写入；尚未发布或改变可见性。222 个历史文本版本的常见敏感格式扫描无发现，不能替代完整安全审计。用户随后完成证书侧操作，本机已核验可用 Developer ID Application 身份；分发副本已完成 Developer ID 签名，公证凭据已验证；首个 DMG 公证任务已提交，当前等待 Apple 处理。公证 Accepted 与本机包体验证完成后可把附件加入私有草稿；面向公众发布前仍需全新 Mac 安装验收。公开下载的入口与可见性仍需明确决定。
 
 ## 推荐顺序
 
@@ -22,7 +22,7 @@
 | 项目 | 当前事实 | 发布前动作 |
 | --- | --- | --- |
 | 品牌 | TalkFloat；0.8.2 改用石墨灰/银白、黑白双行字幕标志，保留关于入口、权限说明与新导出标题 | 域名注册仍未执行；补公开支持页与正式品牌素材 |
-| 签名 | 已有可用 Developer ID Application 身份；当前安装版仍用原开发签名，分发副本单独准备 | 完成分发副本签名、公证凭据配置与真实提交；开发签名不能冒充正式分发签名 |
+| 签名 | 已有可用 Developer ID Application 身份；当前安装版仍用原开发签名，分发副本单独准备 | 等待已提交 DMG 的公证结果，完成票据及 Gatekeeper 检查；开发签名不能冒充正式分发签名 |
 | 平台 | 只打包 arm64；声明最低 macOS 14.2；本地模式代码要求 macOS 26.4+ | 首发明确限定 Apple Silicon；在最低云端系统和本地支持系统分别实测，或收紧支持范围 |
 | 功能 | 本地模型、豆包自带凭据；系统声 / Chrome + 麦克风；双语存档 | 新用户准备模型、拒绝权限、离线、切换输入设备、长会与停止尾句需发布回归 |
 | 源码 | 当前私有；应用代码已采用 MIT；SpeexDSP 保留 BSD 许可，两者随 App 附带 | 已补许可证、隐私、贡献和安全说明；公开前审计全部 Git 历史与可发布素材 |
@@ -35,7 +35,7 @@
 
 ## 路线一：直接下载与 Homebrew
 
-Apple 的正式站外分发流程使用 Developer ID Application 和公证；公证是自动安全检查，不等于 App Store 人工审核。当前打包脚本可接收指定身份，但还未提交任何公证任务。[Developer ID](https://developer.apple.com/developer-id/)，[Apple 公证文档](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)。
+Apple 的正式站外分发流程使用 Developer ID Application 和公证；公证是自动安全检查，不等于 App Store 人工审核。当前打包脚本已使用指定 Developer ID 身份提交首个 DMG 公证任务，尚待结果。[Developer ID](https://developer.apple.com/developer-id/)，[Apple 公证文档](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)。
 
 发布者的步骤：
 
@@ -47,7 +47,7 @@ Apple 的正式站外分发流程使用 Developer ID Application 和公证；公
 
 ### DMG 的当前可执行步骤
 
-本机原有的 0.8.4 App 使用 Apple Development 签名，签名本身验证通过，但 Gatekeeper 评估拒绝，且没有 stapled ticket。随后已取得可用 Developer ID Application 身份，独立分发副本正在准备；旧开发包的信任状态不会因此改变。当前可生成开发预览来检查安装文件结构：
+本机原有的 0.8.4 App 使用 Apple Development 签名，签名本身验证通过，但 Gatekeeper 评估拒绝，且没有 stapled ticket。随后已取得可用 Developer ID Application 身份，独立分发副本已签名并通过完整性检查；旧开发包的信任状态不会因此改变。当前可生成开发预览来检查安装文件结构：
 
 ```sh
 scripts/package-dmg.sh --development
@@ -63,7 +63,7 @@ scripts/build-app.sh
 scripts/package-dmg.sh --release
 ```
 
-正式模式只接受 Developer ID 签名的 App，给镜像签名后提交公证；只有 Accepted、票据绑定和 Gatekeeper 检查都通过，才输出正式命名的 DMG 和 SHA256。当前仅验证开发路径及拒绝错误签名的检查，尚未执行真实公证。脚本不替换正在使用的安装版，也不发布 GitHub Release；全新 Mac 首装与旧版升级仍需单独验收。
+正式模式只接受 Developer ID 签名的 App，给镜像签名后提交公证；只有 Accepted、票据绑定和 Gatekeeper 检查都通过，才输出正式命名的 DMG 和 SHA256。开发路径及拒绝错误签名的检查已验证；真实公证已提交，尚待结果及后续票据、Gatekeeper 验证。脚本不替换正在使用的安装版，也不发布 GitHub Release；全新 Mac 首装与旧版升级仍需单独验收。
 
 通过验收后，把 `.dmg` 和 `.dmg.sha256` 作为 Release 附件，用户下载 DMG、拖到 Applications、从菜单栏使用即可。GitHub 自动附带的 “Source code” ZIP 是源码，不是安装包。[GitHub Releases 说明](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
 

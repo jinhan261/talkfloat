@@ -11,7 +11,7 @@ Swift + SwiftUI / AppKit，Apple Silicon。现名 TalkFloat，原名 Saylori；�
 
 ## DMG 安装（准备中）
 
-普通用户将优先通过 [GitHub Releases](https://github.com/jinhan261/talkfloat/releases) 下载 `.dmg`，打开后把 TalkFloat 拖入 Applications，再从菜单栏使用；不需要 Xcode。**目前尚未发布正式安装包**：仓库仍是私有，本机只有开发签名，尚未完成 Developer ID 分发签名、Apple 公证和全新 Mac 验收。
+普通用户将优先通过 [GitHub Releases](https://github.com/jinhan261/talkfloat/releases) 下载 `.dmg`，打开后把 TalkFloat 拖入 Applications，再从菜单栏使用；不需要 Xcode。**目前尚未发布正式安装包**：仓库仍是私有，0.8.4 已完成 Developer ID 分发签名并提交 Apple 公证，正在等待结果；全新 Mac 安装验收仍待完成。
 
 已提供可重复的 DMG 打包脚本。带 `-development.dmg` 的文件仅用于打包验收，不要当作已公证成品发给普通用户。正式发布步骤见 [发布说明](docs/distribution.md)。
 

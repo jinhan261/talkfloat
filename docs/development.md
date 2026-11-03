@@ -11,13 +11,13 @@ scripts/build-app.sh
 
 构建脚本从 `native/Resources/AppIcon.png` 制作图标，输出 `dist/TalkFloat.app` 和版本 ZIP，不依赖历史 HTML 原型目录。签名使用 `TALKFLOAT_SIGN_IDENTITY`，未设置时仅在本机恰有一个 Apple Development 证书时自动选择；兼容旧环境变量 `SAYLORI_SIGN_IDENTITY`；没有唯一可用证书会明确失败；开发者可以显式传入 `--ad-hoc` 做本机源码试用，绝不静默退回临时签名。证书私钥、钥匙串、签名 ZIP 不提交 Git。
 
-需要签名安装才能稳定检验系统录音权限和钥匙串读取。更换签名身份可能触发重新授权；在同一开发机上应显式固定原身份。当前打包用于本机试用，未做 Developer ID 公证与公开分发。
+需要签名安装才能稳定检验系统录音权限和钥匙串读取。更换签名身份可能触发重新授权；在同一开发机上应显式固定原身份。本机安装版继续保留原开发签名；0.8.4 独立分发副本已完成 Developer ID 签名并提交公证，尚未公开分发。
 
 ### DMG 打包
 
 已有 `dist/TalkFloat.app` 后运行 `scripts/package-dmg.sh --development`，得到带 `-development.dmg` 后缀的开发预览及 SHA256 文件。内容仅有签名 App、Applications 链接及安装说明；不打包本机会议记录、模型、密钥、诊断文件。脚本核对签名和 arm64、拒绝覆盖已有产物、校验镜像并自动清理项目内临时打包目录，不重签或替换已安装 App。
 
-正式模式为 `scripts/package-dmg.sh --release`：需要源 App 已有 Developer ID Application 签名，并设置同类 `TALKFLOAT_SIGN_IDENTITY` 和已配置的 `TALKFLOAT_NOTARY_PROFILE`。它给 DMG 签名，提交公证，验证 Accepted 后绑定票据并检查 Gatekeeper，最后生成 SHA256。不会自动创建证书、索取密码或上传 GitHub Release。开发证书不能走正式模式；公证分支尚未真实执行，需配置完成后验证。详细顺序见发布文档。
+正式模式为 `scripts/package-dmg.sh --release`：需要源 App 已有 Developer ID Application 签名，并设置同类 `TALKFLOAT_SIGN_IDENTITY` 和已配置的 `TALKFLOAT_NOTARY_PROFILE`。它给 DMG 签名，提交公证，验证 Accepted 后绑定票据并检查 Gatekeeper，最后生成 SHA256。不会自动创建证书、索取密码或上传 GitHub Release。开发证书不能走正式模式；公证分支已实际提交，当前等待 Apple 返回结果；尚不能把提交成功当作公证通过。详细顺序见发布文档。
 
 可用 `TALKFLOAT_APP_PATH` 指向独立的分发 App 副本，例如 `dist/release-0.8.4/TalkFloat.app`，避免给正式包签名时替换现有开发产物。脚本仍将 DMG 和校验文件输出到项目 `dist/`；默认源 App 不变。分发签名不是重新编译，同一构建可以保留开发副本与分发副本。
 
