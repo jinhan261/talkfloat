@@ -28,6 +28,7 @@ import SayloriCore
             model.access.draft.legacy=true;model.access.draft.appID="1234567890";model.access.draft.accessToken="design-example-not-a-real-token"
             export(ConnectionSettings(model:model,access:model.access).padding(Brand.inset).frame(width:Brand.width).background(Brand.surface),name:"\(name)-connection",scheme:scheme,directory:directory)
             export(ArchiveSettings(model:model).padding(Brand.inset).frame(width:Brand.width).background(Brand.surface),name:"\(name)-archive",scheme:scheme,directory:directory)
+            export(ArchiveLocationRow(directory:URL(fileURLWithPath:"/Volumes/Shared/International projects/2026/Research and product development/Quarterly meetings and bilingual transcripts",isDirectory:true)){}.padding(Brand.inset).frame(width:Brand.width).background(Brand.surface),name:"\(name)-archive-long-path",scheme:scheme,directory:directory)
             model.showingSettings=false;model.phase = .live;model.microphoneReady=true
             model.microphoneProcessingMode=2;model.microphoneRMSDB = -42;model.microphonePassing=false
             export(PanelView(model:model),name:"\(name)-live",scheme:scheme,directory:directory)

@@ -43,7 +43,9 @@ TALKFLOAT_SIGN_IDENTITY='你的证书 SHA-1' scripts/install-local.sh
 
 系统声音由 ScreenCaptureKit 获取，麦克风由 AVAudioEngine 获取；两路独立处理。`SpeechAnalyzer` + `SpeechTranscriber` 的渐进转写先输出英语，再由 `TranslationSession` 的已安装英语 → 简体中文模型翻译，使用低延迟策略。识别修订会更新字幕，最终结果写入记录。
 
-这是 Apple 提供的设备端模型管线，不是项目自带的 Whisper、Qwen 或大语言模型。模型由 Apple 下载和管理，不随源码分发，Apple 未通过这些 API 提供可选择的权重版本。下载资源需要网络；本地模式不调用豆包、不上传音频或文字，不会偷偷回退到付费服务。翻译质量与豆包不同，数字、姓名和术语必须核对。
+这是 Apple 提供的专用语音识别与文本翻译管线。当前明确使用 `TranslationSession.Strategy.lowLatency`；Apple 将其说明为适合实时音频翻译的传统翻译模型策略，速度和耗电优先。当前没有调用 Foundation Models 通用对话大语言模型。Apple 另有使用 Apple Intelligence 的 `highFidelity` 翻译策略，本项目尚未启用或对其做效果/延迟对照。参见 [SpeechAnalyzer 官方介绍](https://developer.apple.com/videos/play/wwdc2025/277/)、[lowLatency](https://developer.apple.com/documentation/translation/translationsession/strategy/lowlatency) 和 [highFidelity](https://developer.apple.com/documentation/translation/translationsession/strategy/highfidelity)。
+
+模型由 Apple 下载和管理，不随源码分发，Apple 未通过这些 API 提供可选择的权重版本。下载资源需要网络；本地模式不调用豆包、不上传音频或文字，不会偷偷回退到付费服务。翻译质量与豆包不同，数字、姓名和术语必须核对。
 
 ## 使用边界与隐私
 
