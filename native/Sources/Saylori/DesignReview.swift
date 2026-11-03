@@ -14,6 +14,10 @@ import SayloriCore
         model.captionStyle = .dark;model.backgroundOpacity=1;model.showSource=true;model.fontSize=30
         for (name,scheme) in [("light",ColorScheme.light),("dark",ColorScheme.dark)] {
             NSApp.appearance=NSAppearance(named:scheme == .dark ? .darkAqua:.aqua)
+            export(HStack(spacing:24){
+                VStack(spacing:6){MenuBarActivityPreview(live:false).frame(width:34,height:24);Text("未开始").font(.system(size:11)).foregroundStyle(.secondary)}
+                VStack(spacing:6){MenuBarActivityPreview(live:true).frame(width:34,height:24);Text("翻译中").font(.system(size:11)).foregroundStyle(.secondary)}
+            }.padding(16).background(Brand.surface),name:"\(name)-menu-status",scheme:scheme,directory:directory)
             model.microphoneReady=false;model.microphonePassing=false
             model.phase = .idle;model.showingSettings=false
             model.mode = .local
@@ -62,4 +66,18 @@ import SayloriCore
         print("Rendered \(name): \(Int(size.width))×\(Int(size.height)) pt")
         window.contentView=nil
     }
+}
+
+private struct MenuBarActivityPreview:NSViewRepresentable {
+    let live:Bool
+    func makeNSView(context:Context)->NSButton {
+        let button=NSButton(frame:NSRect(x:0,y:0,width:34,height:24))
+        button.image=TalkFloatArtwork.menuImage();button.imagePosition = .imageOnly
+        button.isBordered=false
+        let badge=MenuBarActivityBadge(frame:button.bounds)
+        badge.autoresizingMask=[.width,.height];badge.isHidden = !live
+        button.addSubview(badge)
+        return button
+    }
+    func updateNSView(_ button:NSButton,context:Context){}
 }

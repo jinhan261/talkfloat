@@ -6,6 +6,7 @@ import SayloriCore
 @MainActor final class AppDelegate:NSObject,NSApplicationDelegate,NSWindowDelegate {
     let model=SessionModel()
     private var status:NSStatusItem!
+    private let activityBadge=MenuBarActivityBadge(frame:.zero)
     private let popover=NSPopover()
     private var panel:NSPanel!
     private var subscriptions=Set<AnyCancellable>()
@@ -17,6 +18,11 @@ import SayloriCore
         installMainMenu()
         status=NSStatusBar.system.statusItem(withLength:NSStatusItem.variableLength)
         status.button?.image=TalkFloatArtwork.menuImage()
+        if let button=status.button {
+            activityBadge.frame=button.bounds;activityBadge.autoresizingMask=[.width,.height]
+            activityBadge.isHidden=true;activityBadge.setAccessibilityElement(false)
+            button.addSubview(activityBadge)
+        }
         status.button?.target=self;status.button?.action=#selector(togglePopover)
         status.button?.toolTip="TalkFloat · 英语实时翻译"
         // UI inspection can pin this transient surface without changing ordinary launches.
@@ -50,8 +56,11 @@ import SayloriCore
         }
         model.$phase.sink{[weak self]phase in
             self?.status.button?.contentTintColor=nil // Let macOS adapt the template in every phase.
+            self?.activityBadge.isHidden=phase != .live
             self?.status.button?.toolTip="TalkFloat · \(phase.rawValue)"
-            TestDiagnostics.update(["statusIconUsesSystemTint":self?.status.button?.contentTintColor == nil,"statusIconIsTemplate":self?.status.button?.image?.isTemplate == true])
+            self?.status.button?.setAccessibilityValue(phase.rawValue)
+            TestDiagnostics.update(["statusIconUsesSystemTint":self?.status.button?.contentTintColor == nil,"statusIconIsTemplate":self?.status.button?.image?.isTemplate == true,"statusActivityVisible":self?.activityBadge.isHidden == false])
+            TestDiagnostics.record("menu-status",["phase":phase.rawValue,"badgeVisible":self?.activityBadge.isHidden == false])
         }.store(in:&subscriptions)
         model.$showSource.dropFirst().sink{[weak self]show in
             guard let self,show,self.panel.frame.height<168 else{return}

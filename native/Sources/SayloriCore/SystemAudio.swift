@@ -90,7 +90,7 @@ public final class SystemAudio:NSObject, SCStreamOutput, SCStreamDelegate, @unch
         while pending.count>=2560{
             let data=Data(pending.prefix(2560));pending.removeFirst(2560)
             if case .dropped = continuation.yield(AudioPacket(data:data,queuedAt:ProcessInfo.processInfo.systemUptime)){
-                continuation.finish(throwing:SayError.message("网络发送跟不上实时声音，已停止收听并保留文字。请检查网络后重新开始。"));stop();return
+                continuation.finish(throwing:SayError.message("音频处理跟不上实时声音，已停止收听并保留文字。请稍后重新开始。"));stop();return
             }
         }
     }
