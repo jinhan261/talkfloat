@@ -15,9 +15,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.8.5</string>
+	<string>0.8.6</string>
 	<key>CFBundleVersion</key>
-	<string>37</string>
+	<string>38</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.2</string>
 	<key>LSUIElement</key>
@@ -28,7 +28,5 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>TalkFloat 收听你选择的麦克风，将你的英语发言转为中英字幕并保存文字；不保存录音。</string>
-	<key>NSScreenCaptureUsageDescription</key>
-	<string>TalkFloat 使用系统采集接口收听会议声音，生成实时字幕；不接收屏幕画面，也不保存录音。</string>
 </dict>
 </plist>

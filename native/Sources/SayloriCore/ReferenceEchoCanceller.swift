@@ -43,7 +43,7 @@ public final class ReferenceEchoCanceller:@unchecked Sendable {
         var missing=0,linearEnergy=0.0
         for offset in stride(from:0,to:input.count-319,by:320){
             // The sender holds two 80 ms packets, allowing a playback reference
-            // ahead of the mic delivery clock. SCStream and hardware input have
+            // ahead of the mic delivery clock. System capture and hardware input have
             // different delivery latency; the causal filter learns the offset.
             let index=Int(((start+Double(offset)/16000+0.08-(referenceStart ?? start))*16000).rounded())
             for i in 0..<320{if reference.indices.contains(index+i){play[i]=reference[index+i]}else{play[i]=0;missing+=1}}

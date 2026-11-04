@@ -11,7 +11,7 @@ scripts/build-app.sh
 
 构建脚本从 `native/Resources/AppIcon.png` 制作图标，输出 `dist/Build.noindex/TalkFloat.app` 和版本 ZIP，不依赖历史 HTML 原型目录。签名使用 `TALKFLOAT_SIGN_IDENTITY`，未设置时仅在本机恰有一个 Apple Development 证书时自动选择；兼容旧环境变量 `SAYLORI_SIGN_IDENTITY`；没有唯一可用证书会明确失败；开发者可以显式传入 `--ad-hoc` 做本机源码试用，绝不静默退回临时签名。证书私钥、钥匙串、签名 ZIP 不提交 Git。
 
-需要签名安装才能稳定检验系统录音权限和钥匙串读取。更换签名身份可能触发重新授权；在同一开发机上应显式固定原身份。0.8.5 分发版已完成 Developer ID 签名，DMG 公证 Accepted、票据和 Gatekeeper 验证通过，作为私有预览 Release 提供下载。
+需要签名安装才能稳定检验系统录音权限和钥匙串读取。更换签名身份可能触发重新授权；在同一开发机上应显式固定原身份。0.8.6 分发版已完成 Developer ID 签名，DMG 公证 Accepted、票据和 Gatekeeper 验证通过，作为私有预览 Release 提供下载。
 
 ### 从源码安装
 
@@ -29,7 +29,7 @@ scripts/install-local.sh --ad-hoc
 
 已有 `dist/Build.noindex/TalkFloat.app` 后运行 `scripts/package-dmg.sh --development`，得到带 `-development.dmg` 后缀的开发预览及 SHA256 文件。内容仅有签名 App、Applications 链接及安装说明；不打包本机会议记录、模型、密钥、诊断文件。脚本核对签名和 arm64、拒绝覆盖已有产物、校验镜像并自动清理项目内临时打包目录，不重签或替换已安装 App。
 
-正式模式为 `scripts/package-dmg.sh --release`：需要源 App 已有 Developer ID Application 签名，并设置同类 `TALKFLOAT_SIGN_IDENTITY` 和已配置的 `TALKFLOAT_NOTARY_PROFILE`。它给 DMG 签名，提交公证，验证 Accepted 后绑定票据并检查 Gatekeeper，最后生成 SHA256。不会自动创建证书、索取密码或上传 GitHub Release。开发证书不能走正式模式；0.8.5 已实际走通正式分支：Apple Accepted、票据绑定/验证、DMG 与内含 App 的 Gatekeeper 检查均通过。详细顺序见发布文档。
+正式模式为 `scripts/package-dmg.sh --release`：需要源 App 已有 Developer ID Application 签名，并设置同类 `TALKFLOAT_SIGN_IDENTITY` 和已配置的 `TALKFLOAT_NOTARY_PROFILE`。它给 DMG 签名，提交公证，验证 Accepted 后绑定票据并检查 Gatekeeper，最后生成 SHA256。不会自动创建证书、索取密码或上传 GitHub Release。开发证书不能走正式模式；0.8.6 已实际走通正式分支：Apple Accepted、票据绑定/验证、DMG 与内含 App 的 Gatekeeper 检查均通过。详细顺序见发布文档。
 
 可用 `TALKFLOAT_APP_PATH` 指向独立的签名 App 副本；脚本仍将 DMG 和校验文件输出到项目 `dist/`，不修改源 App。额外构建副本应放在 `.noindex` 目录内或保存为 ZIP，避免被应用搜索收录。
 
@@ -37,7 +37,7 @@ scripts/install-local.sh --ad-hoc
 
 单元测试覆盖协议编码、两路字幕配对、暂停后历史、存档修订、疑似回声、门限、布局与发送策略。DSP 样本是合成信号；`native/Tests/Fixtures` 中英语素材由 macOS `say` 生成，不是会议录音。
 
-可选实机集成检查需要 App 已安装到 `~/Applications/TalkFloat.app`，退出当前实例，本地模式先准备语言模型；豆包模式配置自己的凭据，然后执行：
+可选实机集成检查自动识别 `/Applications/TalkFloat.app` 或 `~/Applications/TalkFloat.app` 的唯一安装，也可用 `--app PATH` 明确指定。退出当前实例，本地模式先准备语言模型；豆包模式配置自己的凭据，然后执行：
 
 ```sh
 python3 scripts/run-native-test.py docs/local-integration --engine local
@@ -86,3 +86,10 @@ git diff --cached --stat
 展开的构建 App 存入 `dist/Build.noindex/`，版本 ZIP/DMG 仍位于 `dist/`。构建先在项目临时目录组装全新 Bundle，签名验证后才替换构建输出，避免旧资源混入。安装脚本将旧版压缩为 ZIP 并验证归档，替换失败时恢复原安装；不再产生会被启动器收录的 `.app.backup` 目录。正常退出或失败时清理自己的临时安装目录。
 
 不要同时保留 `~/Applications/TalkFloat.app` 与 `/Applications/TalkFloat.app`。DMG 用户保留自己选择的一个安装位置即可；源码安装脚本默认使用前者。移动或卸载 App 不应删除钥匙串、偏好及会议记录。
+
+
+## 纯音频采集验证（0.8.6）
+
+仅授予 TalkFloat“仅系统录音”，撤销其录屏授权后测试。若系统仍显示开关开启但日志报告签名 requirement 不匹配，按 macOS 正常设置流程刷新对应 App 的旧音频授权；不要重置所有应用或修改 TCC 数据库。麦克风是独立权限，不能用其权限替代系统音频权限。
+
+Chrome 测试先确认标签页实际有声：自动化工具可能将测试标签页静音，页面进度条走完不等于向系统输出了音频。正向播放 Chrome 样音；反向使用其他播放器播放另一份样音，并确认 Chrome-only 记录不含该句。测试输出与真实会议记录仍只留本机。

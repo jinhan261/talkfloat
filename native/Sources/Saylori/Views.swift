@@ -215,7 +215,9 @@ struct ConnectionSettings:View {
                 SectionLabel(title:"声音与权限")
                 Button(model.phase == .checking ? "正在检测，请播放英语…":"检测所选音源（8 秒）"){Task{audioResult=await model.testAudio()}}.disabled(model.active || model.hasMeeting)
                 if !audioResult.isEmpty{Text(audioResult).font(.system(size:11)).fixedSize(horizontal:false,vertical:true)}
-                Button("录屏与系统录音权限…"){NSWorkspace.shared.open(URL(string:"x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)}
+                Button("仅系统录音权限…"){NSWorkspace.shared.open(URL(string:"x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)}
+                Text("在系统设置的“仅系统录音”中允许 TalkFloat，无需开启录屏。")
+                    .foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
             }.buttonStyle(.plain).font(.system(size:11)).foregroundStyle(Brand.accent)
             Text("中英文字保存在这台 Mac。即时预览可能会校正，会议记录以最终译文为准。")
                 .font(.system(size:11)).lineSpacing(2).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)

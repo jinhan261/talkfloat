@@ -69,7 +69,7 @@ final class ProtocolTests:XCTestCase {
         var samples:[Float]=[0.4,0.2,-0.4,-0.2,1,1]
         samples.withUnsafeMutableBytes{bytes in
             var buffer=AudioBufferList(mNumberBuffers:1,mBuffers:AudioBuffer(mNumberChannels:2,mDataByteSize:UInt32(bytes.count),mData:bytes.baseAddress))
-            _=say_audio_callback(0,nil,&buffer,nil,nil,nil,UnsafeMutableRawPointer(ring))
+            say_ring_write_frames(ring,&buffer,Int.max)
         }
         var result=[Float](repeating:0,count:4)
         XCTAssertEqual(say_ring_read(ring,&result,2),2)
@@ -77,7 +77,7 @@ final class ProtocolTests:XCTestCase {
         XCTAssertEqual(say_ring_read(ring,&result,4),1);XCTAssertEqual(result[0],1)
         for _ in 0..<2{samples.withUnsafeMutableBytes{bytes in
             var buffer=AudioBufferList(mNumberBuffers:1,mBuffers:AudioBuffer(mNumberChannels:2,mDataByteSize:UInt32(bytes.count),mData:bytes.baseAddress))
-            _=say_audio_callback(0,nil,&buffer,nil,nil,nil,UnsafeMutableRawPointer(ring))
+            say_ring_write_frames(ring,&buffer,Int.max)
         }}
         XCTAssertEqual(say_ring_overflow(ring),1)
         say_ring_discard(ring)

@@ -1,8 +1,8 @@
 # TalkFloat 发布方案与当前差距
 
-核查日期：2026-11-03。范围：原生 macOS 菜单栏英中字幕工具。当前仓库保持私有；0.8.5 作为预览 Release 发布，供有访问权限的用户下载试装。没有公开下载入口、Homebrew 包或 App Store 上架。
+核查日期：2026-11-04。范围：原生 macOS 菜单栏英中字幕工具。当前仓库保持私有；0.8.6 作为预览 Release 发布，供有访问权限的用户下载试装。没有公开下载入口、Homebrew 包或 App Store 上架。
 
-同日用户要求将仓库名统一为 TalkFloat，并希望通过 DMG 简化安装。已将同一仓库改为 [jinhan261/talkfloat](https://github.com/jinhan261/talkfloat)，保留 private 和提交历史；本地 remote 与源码安装地址已同步。优先准备 DMG 直发，不因此自动公开源码或发布未公证成品。来源：用户当前决定；适用当前仓库与站外分发；用户明确公开或取得正式签名条件后再推进发布。
+2026-11-03 用户要求将仓库名统一为 TalkFloat，并希望通过 DMG 简化安装。已将同一仓库改为 [jinhan261/talkfloat](https://github.com/jinhan261/talkfloat)，保留 private 和提交历史；本地 remote 与源码安装地址已同步。优先准备 DMG 直发，不因此自动公开源码或发布未公证成品。来源：用户当前决定；适用当前仓库与站外分发；用户明确公开或取得正式签名条件后再推进发布。
 
 后续同日用户授权继续签名、公证，并先要求通过后上传 Release 草稿、仓库保持私有。`v0.8.4` / build 36 已完成 Developer ID 签名，Apple 返回 Accepted，日志无 issues；公证票据、DMG 与内含 App 的 Gatekeeper、镜像校验、App 完整文件对账均通过。DMG 和 SHA256 文件已加入私有 `v0.8.4` prerelease 草稿，尚未发布或改变仓库可见性。此前 222 个历史文本版本的常见敏感格式扫描无发现，不能替代完整安全审计。随后用户反馈 Releases 为空，要求复查、整理 README 和重复 App，并自行下载 DMG 试装：本轮发布 0.8.5 私有预览版，保留私有仓库。面向公众发布前仍需全新 Mac 安装验收及明确公开下载入口。
 
@@ -22,7 +22,7 @@
 | 项目 | 当前事实 | 发布前动作 |
 | --- | --- | --- |
 | 品牌 | TalkFloat；0.8.2 改用石墨灰/银白、黑白双行字幕标志，保留关于入口、权限说明与新导出标题 | 域名注册仍未执行；补公开支持页与正式品牌素材 |
-| 签名 | 0.8.5 使用 Developer ID 签名；DMG 已公证并绑定票据，Gatekeeper 接受 | 全新 Mac 与升级验证；开发签名不能冒充正式分发签名 |
+| 签名 | 0.8.6 使用 Developer ID 签名；DMG 已公证并绑定票据，Gatekeeper 接受 | 全新 Mac 与升级验证；开发签名不能冒充正式分发签名 |
 | 平台 | 只打包 arm64；声明最低 macOS 14.2；本地模式代码要求 macOS 26.4+ | 首发明确限定 Apple Silicon；在最低云端系统和本地支持系统分别实测，或收紧支持范围 |
 | 功能 | 本地模型、豆包自带凭据；系统声 / Chrome + 麦克风；双语存档 | 新用户准备模型、拒绝权限、离线、切换输入设备、长会与停止尾句需发布回归 |
 | 源码 | 当前私有；应用代码已采用 MIT；SpeexDSP 保留 BSD 许可，两者随 App 附带 | 已补许可证、隐私、贡献和安全说明；公开前审计全部 Git 历史与可发布素材 |
@@ -92,7 +92,7 @@ brew upgrade --cask talkfloat
 
 流程为：注册 App ID / App Store Connect 记录，建立 Xcode 可归档的 macOS App 目标，配置商店签名与 Sandbox，上传构建，经 TestFlight 测试后补齐资料并提交审核。Swift Package 的核心代码可以继续复用；当前手工组装的开发签名 ZIP 不能直接当成商店提交包。[提交 App](https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-an-app)，[TestFlight](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/)。
 
-当前最大技术差距是 Sandbox，而不是改名。开启后应逐个验证 ScreenCaptureKit 系统声、Chrome 筛选、麦克风、系统语音处理、Apple 模型、钥匙串和归档路径；导出到用户选择的位置使用合适的系统文件面板和授权。不能假定增加一个 entitlement 就全部正常。[Mac App Store 规则 2.4.5](https://developer.apple.com/app-store/review/guidelines/#hardware-compatibility)
+当前最大技术差距是 Sandbox，而不是改名。开启后应逐个验证 Core Audio Process Tap 系统声、Chrome 筛选、麦克风、系统语音处理、Apple 模型、钥匙串和归档路径；导出到用户选择的位置使用合适的系统文件面板和授权。不能假定增加一个 entitlement 就全部正常。[Mac App Store 规则 2.4.5](https://developer.apple.com/app-store/review/guidelines/#hardware-compatibility)
 
 商店材料包括图标、截图、说明、支持 URL、隐私政策 URL、年龄分级、出口合规回答、审核说明及可完整测试的方式。针对本工具，应解释为何需要系统音频权限、两路声音的区别、何时发送豆包、哪些记录保存在本机。采音状态应持续可见。[审核规则 2.5.14 与 5.1](https://developer.apple.com/app-store/review/guidelines/)
 

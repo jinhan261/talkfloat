@@ -8,7 +8,7 @@
 
 ## 如何实现
 
-使用 **Swift、SwiftUI 和 AppKit** 构建。系统声音通过 ScreenCaptureKit 获取，麦克风通过 AVAudioEngine 获取，两路独立处理。
+使用 **Swift、SwiftUI 和 AppKit** 构建。系统声音通过 Core Audio Process Tap 获取，麦克风通过 AVAudioEngine 获取，两路独立处理。系统采音只需“仅系统录音”授权，不申请录屏权限。
 
 | 模式 | 处理流程 | 费用与数据 |
 | --- | --- | --- |

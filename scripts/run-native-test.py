@@ -5,7 +5,13 @@ from pathlib import Path
 root=Path(__file__).resolve().parent.parent
 out=Path(sys.argv[1]).resolve()
 out.mkdir(parents=True,exist_ok=True)
-app=Path.home()/'Applications/TalkFloat.app'
+if '--app' in sys.argv:
+ app=Path(sys.argv[sys.argv.index('--app')+1]).expanduser().resolve()
+else:
+ installed=[p for p in (Path('/Applications/TalkFloat.app'),Path.home()/'Applications/TalkFloat.app') if p.is_dir()]
+ if len(installed)!=1:raise RuntimeError('Specify --app PATH when no installation or multiple installations exist')
+ app=installed[0]
+if not (app/'Contents/MacOS/TalkFloat').is_file():raise RuntimeError('TalkFloat executable not found in --app')
 args=['--self-test',str(out)]
 args.append('--pin-test-popover')
 if '--engine' in sys.argv:args.extend(['--engine',sys.argv[sys.argv.index('--engine')+1]])

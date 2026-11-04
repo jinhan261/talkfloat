@@ -1,11 +1,11 @@
 # TalkFloat 架构
 
-更新：2026-11-03 · 0.8.5。采用 Swift Package；AppKit 管理菜单栏和窗口，SwiftUI 绘制内容。保持系统声与麦克风两条独立的音频、识别和字幕时间线。
+更新：2026-11-04 · 0.8.6。采用 Swift Package；AppKit 管理菜单栏和窗口，SwiftUI 绘制内容。保持系统声与麦克风两条独立的音频、识别和字幕时间线。
 
 ```mermaid
 flowchart TD
     UI[SwiftUI 界面 / AppDelegate] --> Session[SessionModel · MainActor 会话协调]
-    System[SystemAudio · ScreenCaptureKit] --> Relay[AudioRelay · 串行发送 / 延迟保护]
+    System[SystemAudio · Core Audio Process Tap] --> Relay[AudioRelay · 串行发送 / 延迟保护]
     Mic[MicrophoneAudio · AVAudioEngine] --> Processor[MicrophonePacketProcessor · 有界前瞻 / 门限 / AEC]
     Processor --> MicRelay[独立 AudioRelay]
     Relay --> Engine[TranslationEngine · 每路独立实例]
@@ -43,6 +43,12 @@ flowchart TD
 | `MeetingRecord` / `TranscriptStore` | 可编码存档模型 / 文件读写 actor；revision 防止迟到自动保存覆盖结束版 |
 | `AppTestHarness` | 只有明确测试参数时才构造；集成、视觉与生命周期验证从应用委托中独立出来 |
 | `AudioRing` / `SpeexDSP` | C 有界音频 ring / 有许可证的参考回声消除实现 |
+
+## 系统音频与权限
+
+`SystemAudio` 使用 Core Audio Process Tap，经私有 aggregate device 输出音频；不枚举屏幕，不调用 ScreenCaptureKit。只需“仅系统录音”授权，麦克风仍由 AVAudioEngine 独立授权。Chrome 按音频进程及其 bundle ID 筛选；进程列表变化时更新 tap，macOS 26+ 同时启用进程恢复匹配。
+
+HAL 创建/销毁在串行工作队列执行；实时 C 回调只写入预分配 ring。启动结果只能完成一次，取消和 15 秒超时不会让迟到的 HAL 返回重新激活会话。仍在等待系统授权时限制重复启动，避免堆积采音线程。格式通知先比较实际格式；格式真的变化时明确停止并保留文字，不用旧格式继续解码。
 
 ## 时间与并发约束
 

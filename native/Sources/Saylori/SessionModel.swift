@@ -537,7 +537,7 @@ import Combine
                 }
             }
             audio.stop();guard generation==token else{return "检测已结束"};capture=nil;phase = .idle;level=0
-            let result=bytes>0 && peak>0.001 ? "已捕获\(source.name)，可以开始翻译。" : "采音已启动，但未检测到声音。请播放一段英语后重试，并检查录制权限。"
+            let result=bytes>0 && peak>0.001 ? "已捕获\(source.name)，可以开始翻译。" : "未检测到声音。请播放一段英语后重试，并确认系统设置的“仅系统录音”已允许 TalkFloat；无需开启录屏。"
             if CommandLine.arguments.contains("--audio-check") {
                 let report:[String:Any]=["bytes":bytes,"peak":peak,"seconds":Double(bytes)/32000,"result":result]
                 if let data=try? JSONSerialization.data(withJSONObject:report,options:.prettyPrinted){try? data.write(to:URL(fileURLWithPath:NSTemporaryDirectory()).appendingPathComponent("saylori-audio-check.json"))}
