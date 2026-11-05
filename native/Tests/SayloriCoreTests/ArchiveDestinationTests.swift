@@ -2,6 +2,22 @@ import XCTest
 @testable import SayloriCore
 
 final class ArchiveDestinationTests:XCTestCase {
+    func testFreshBrandStorageDoesNotRestoreRetiredCheckpoints()async throws{
+        XCTAssertEqual(TranscriptStore.defaultDirectory.deletingLastPathComponent().lastPathComponent,"TalkFloat")
+        XCTAssertEqual(TranscriptStore.defaultRecoveryDirectory.deletingLastPathComponent(),TranscriptStore.defaultDirectory.deletingLastPathComponent())
+        let (root,_,_)=try folders()
+        let old=root.appendingPathComponent("Saylori"),fresh=root.appendingPathComponent("TalkFloat")
+        let oldRecords=old.appendingPathComponent("Recordings"),newRecords=fresh.appendingPathComponent("Recordings")
+        for url in [oldRecords,newRecords]{try FileManager.default.createDirectory(at:url,withIntermediateDirectories:true)}
+        let oldRecovery=old.appendingPathComponent("Recovery")
+        _ = try await TranscriptStore(directory:oldRecords,recoveryDirectory:oldRecovery).save(record())
+        let store=TranscriptStore(directory:newRecords,recoveryDirectory:fresh.appendingPathComponent("Recovery"))
+        try await store.recoverInterrupted(legacyDirectory:newRecords)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath:newRecords.path).isEmpty)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath:oldRecovery.path).count,1)
+        let saved=try await store.save(record(ended:true))
+        XCTAssertEqual(try XCTUnwrap(saved).deletingLastPathComponent().path,newRecords.path)
+    }
     private func record(ended:Bool=false)->MeetingRecord {
         var r=MeetingRecord(sourceName:"System + mic")
         var s=CaptionSegment(sessionID:"s",startMS:0)

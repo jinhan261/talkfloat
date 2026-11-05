@@ -61,7 +61,7 @@ HAL 创建/销毁在串行工作队列执行；实时 C 回调只写入预分配
 
 ## 持久化与边界
 
-凭据保存在 macOS 钥匙串，偏好保存在 UserDefaults。会议记录默认位于 Application Support 下的 `Saylori/Recordings`；用户可在设置选择文件夹，使用 security-scoped bookmark 记住授权。当前会议结束前禁止更改位置；结束写入失败时可另选文件夹并重试。
+凭据保存在 macOS 钥匙串，偏好保存在 UserDefaults。会议记录默认位于 Application Support 下的 `TalkFloat/Recordings`；用户可在设置选择文件夹，使用 security-scoped bookmark 记住授权。当前会议结束前禁止更改位置；结束写入失败时可另选文件夹并重试。
 
 用户目录只写 Markdown，保留原文、译文、来源、疑似回声附录和不完整提示。TranscriptStore 在 App 私有 Recovery 目录先原子写入二进制 plist 检查点，再原子写 Markdown；完成后删除检查点。检查点带原目标目录，重启恢复不会悄悄写到另一个目录。旧默认目录中可识别的 JSON 移入 Recovery/Legacy 备份，其他 JSON 不动。保存失败仍推进修订门限，避免迟到旧快照覆盖新检查点；用户选择的目录丢失时明确报错，不重新创建或静默回退。
 
@@ -78,3 +78,7 @@ HAL 创建/销毁在串行工作队列执行；实时 C 回调只写入预分配
 - 两种模式的采音、麦克风门限与 AEC 路径共用，不因切换引擎取消背景声过滤。
 
 0.8.0 的品牌改名只改变展示和打包入口。旧 Bundle ID、钥匙串标识与存档目录保留，确保已有数据与权限身份连续；不能为统一字符串而全局替换这些值。
+
+## 存储命名决定（2026-11-05）
+
+用户要求弃用这台 Mac 上的旧 Saylori 记录，使用 TalkFloat。0.8.7 将默认 Recordings 和 Recovery 一起放到 Application Support/TalkFloat 下，不扫描早期目录；已选自定义路径保持不变。旧资料的清理只针对本次用户授权的本机操作，不在 App 中自动删除其他用户的数据。Bundle ID、钥匙串 service、偏好域继续稳定。已同步源码、隐私说明与中英 README；仅在用户要求迁移旧数据或改变兼容策略时重新讨论。

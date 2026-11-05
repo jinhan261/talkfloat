@@ -1,6 +1,6 @@
 # TalkFloat 隐私说明
 
-更新：2026-11-04，适用 0.8.6 源码版本。此说明描述本项目代码的行为，不替第三方服务承诺数据保留政策。
+更新：2026-11-05，适用 0.8.7 源码版本。此说明描述本项目代码的行为，不替第三方服务承诺数据保留政策。
 
 ## 音频与模型
 
@@ -14,9 +14,10 @@
 
 - 偏好保存在 macOS UserDefaults。
 - 凭据只在内存使用；勾选“保存到 macOS 钥匙串”才持久保存。卸载 App 不自动删除钥匙串项目。
-- 会议中英文字自动保存为 Markdown，默认在 `~/Library/Application Support/Saylori/Recordings`，可以在设置中选择其他目录。更改目录不会搬动旧文件。
-- 进行中或写入失败的记录还会保存在 `~/Library/Application Support/Saylori/Recovery` 的私有检查点，供下次启动恢复；结束且 Markdown 保存成功后删除对应检查点。
-- 0.8.2 将默认记录目录中可识别的旧 JSON 原件移入上述 Recovery 下的 Legacy 备份；保留旧 Markdown。这些历史备份不会自动删除。
+- 会议中英文字自动保存为 Markdown，默认在 `~/Library/Application Support/TalkFloat/Recordings`，可以在设置中选择其他目录。更改目录不会搬动旧文件。
+- 进行中或写入失败的记录还会保存在 `~/Library/Application Support/TalkFloat/Recovery` 的私有检查点，供下次启动恢复；结束且 Markdown 保存成功后删除对应检查点。
+- 0.8.7 的默认目录改为 TalkFloat，不自动扫描、迁移或删除早期 Saylori 目录；已选择的自定义目录保持不变。
+- 0.8.2 将当时默认记录目录中可识别的旧 JSON 原件移入上述 Recovery 下的 Legacy 备份；保留旧 Markdown。这些历史备份不会自动删除。
 - 通过显式测试参数启动的诊断模式会生成文字与状态日志，只写入测试者指定目录；普通启动不启用诊断。
 
 私有目录和记录使用限制性的本机文件权限，但 Markdown 没有额外加密。用户选择的共享文件夹、iCloud、备份系统可能复制这些文件，请按会议资料的保密要求选择位置。

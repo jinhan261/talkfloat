@@ -10,8 +10,9 @@ import sys
 from pathlib import PurePosixPath
 
 ALLOWED_DOCS = {"docs/architecture.md", "docs/development.md", "docs/code-review.md", "docs/distribution.md"}
+REVIEWED_ASSETS = {"docs/assets/README.md", "docs/assets/caption-light.png", "docs/assets/caption-dark.png", "docs/assets/menu-light.png", "docs/assets/menu-dark.png", "docs/assets/live-demo.gif", "docs/assets/live-captions.png"}
 ALLOWED_ROOTS = {"native", "scripts", ".github"}
-ALLOWED_FILES = {"README.md", ".gitignore", "LICENSE", "CONTRIBUTING.md", "PRIVACY.md", "SECURITY.md"}
+ALLOWED_FILES = {"README.md", "README.en.md", ".gitignore", "LICENSE", "CONTRIBUTING.md", "PRIVACY.md", "SECURITY.md"}
 PATTERNS = {
     "private key": rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----",
     "GitHub token": rb"(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,})",
@@ -42,7 +43,7 @@ def main():
     checked = 0
     for name, ref in entries:
         path = PurePosixPath(name)
-        if name not in ALLOWED_FILES | ALLOWED_DOCS and path.parts[0] not in ALLOWED_ROOTS:
+        if name not in ALLOWED_FILES | ALLOWED_DOCS | REVIEWED_ASSETS and path.parts[0] not in ALLOWED_ROOTS:
             errors.add((name, "not in repository scope"))
         if any(part.startswith((".env", ".build")) or part in {"__pycache__", "DerivedData", ".swiftpm"} for part in path.parts):
             errors.add((name, "local configuration/cache"))
@@ -50,7 +51,7 @@ def main():
             errors.add((name, "local diagnostic/credential file"))
         content = subprocess.check_output(["git", "show", ref])
         if b"\0" in content:
-            if name not in {"native/Resources/AppIcon.png", "native/Tests/Fixtures/english-meeting-v2.aiff", "native/Tests/Fixtures/english-meeting-v2.wav", "native/Tests/Fixtures/raining-question.aiff", "native/Tests/Fixtures/raining-question.wav", "native/Tests/Fixtures/english-meeting.aiff"}:
+            if name not in REVIEWED_ASSETS | {"native/Resources/AppIcon.png", "native/Tests/Fixtures/english-meeting-v2.aiff", "native/Tests/Fixtures/english-meeting-v2.wav", "native/Tests/Fixtures/raining-question.aiff", "native/Tests/Fixtures/raining-question.wav", "native/Tests/Fixtures/english-meeting.aiff"}:
                 errors.add((name, "unexpected binary; review before publication"))
             continue
         checked += 1

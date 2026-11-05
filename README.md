@@ -1,45 +1,71 @@
-# TalkFloat
+<div align="center">
+  <img src="native/Resources/AppIcon.png" width="96" alt="TalkFloat 图标">
+  <h1>TalkFloat</h1>
+  <p><strong>听英语，看中文。字幕浮在你正在用的 App 上。</strong></p>
+  <p>原生 macOS 菜单栏工具 · 英语 → 简体中文</p>
+  <p>
+    <a href="https://github.com/jinhan261/talkfloat/releases/tag/v0.8.7"><img src="https://img.shields.io/badge/preview-v0.8.7-3478F6?style=flat&amp;labelColor=333333" alt="预览版 0.8.7"></a>
+    <img src="https://img.shields.io/badge/macOS-26.4%2B-555555?style=flat&amp;logo=apple&amp;logoColor=white&amp;labelColor=333333" alt="本地模型需要 macOS 26.4+">
+    <img src="https://img.shields.io/badge/chip-Apple_Silicon-555555?style=flat&amp;labelColor=333333" alt="Apple Silicon">
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-555555?style=flat&amp;labelColor=333333" alt="MIT 许可证"></a>
+  </p>
+  <p><a href="https://github.com/jinhan261/talkfloat/releases/tag/v0.8.7"><strong>下载 DMG</strong></a> · <a href="#开始使用">使用说明</a> · <a href="https://github.com/jinhan261/talkfloat/issues">反馈问题</a></p>
+  <p><strong>简体中文</strong> · <a href="README.en.md">English</a></p>
+</div>
 
-原生 macOS 菜单栏实时字幕工具，将英语会议、视频和麦克风发言翻译成简体中文。
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/caption-dark.png">
+    <img src="docs/assets/caption-light.png" width="760" alt="TalkFloat 双语悬浮字幕，当前句与最近内容同时显示">
+  </picture>
+</p>
+<p align="center"><sub>原生字幕窗口 · 示例对白 · 随 GitHub 深浅色切换</sub></p>
 
-- 收听全部系统声音或 Chrome，可同时开启麦克风，并区分字幕来源。
-- 悬浮字幕显示当前句和最近内容，支持拖动、缩放、透明度与字号调整。
-- 在 Apple 本地模型和豆包云端之间切换，每场会话自动保存中英 Markdown。
+## 在会议、视频和网课旁边
+
+- **边听边看** — 当前句置顶，保留最近内容；拖动任意文字或空白区域，沿窗口各边调整大小。
+- **两路声音，分别标记** — 收听全部系统声音或仅 Chrome，可同时收听麦克风。
+- **本地或云端** — Apple 本地模型无需 API 费用；也可切换自己的豆包服务。
+- **结束即存档** — 自动保存中英 Markdown，自选文件夹。不保存录音。
+
+<a href="https://github.com/jinhan261/talkfloat/releases/download/v0.8.7/talkfloat-demo.mp4"><img src="docs/assets/live-demo.gif" width="100%" alt="真实使用录屏：播放英文视频时，TalkFloat 持续显示中英字幕"></a>
+
+[观看完整演示 · 27 秒，无音轨](https://github.com/jinhan261/talkfloat/releases/download/v0.8.7/talkfloat-demo.mp4) · [查看原尺寸实机截图](docs/assets/live-captions.png)
+
+## 开始使用
+
+**Apple 芯片 Mac，推荐 macOS 26.4 或更新版本。** 本地模型要求 26.4+；豆包模式声明最低 14.2，较早系统尚待完整实机验证。暂不提供 Intel 版。
+
+1. **安装** — 从 [Releases](https://github.com/jinhan261/talkfloat/releases/tag/v0.8.7) 下载 DMG，将 TalkFloat 拖入 Applications，再从那里打开。App 位于右上角菜单栏。
+2. **选择模型** — 本地模式首次准备 Apple 语言资源；豆包模式在设置里填写自己的 API Key，或 App ID / Access Token。
+3. **开始翻译** — 选系统音源，需要时打开麦克风，再点击「开始翻译」。仅需相应的系统录音和麦克风权限，**不需要录屏权限**。
+4. **结束并查看记录** — 点击「结束并存档」，从「会议记录」打开 Markdown；在设置里更改存储文件夹。
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/menu-dark.png">
+    <img src="docs/assets/menu-light.png" width="330" alt="菜单栏面板：选择本地或豆包模型、系统音源与麦克风，开始翻译">
+  </picture>
+</p>
+
+DMG 已使用 Developer ID 签名并通过 Apple 公证，附 SHA256 校验文件。当前仓库保持私有，下载需要有访问权限的 GitHub 账号。升级前结束会话并退出旧版，再替换 App，避免同时保留多个安装副本。
 
 ## 如何实现
 
-使用 **Swift、SwiftUI 和 AppKit** 构建。系统声音通过 Core Audio Process Tap 获取，麦克风通过 AVAudioEngine 获取，两路独立处理。系统采音只需“仅系统录音”授权，不申请录屏权限。
+使用 **Swift + SwiftUI + AppKit**，通过 Core Audio Process Tap 采集系统声音，通过 AVAudioEngine 采集麦克风。两路音频独立处理，结果汇入同一个字幕窗口与会议记录。
 
-| 模式 | 处理流程 | 费用与数据 |
+| | Apple 本地模型 | 豆包云端 |
 | --- | --- | --- |
-| 本地模型 | SpeechAnalyzer / SpeechTranscriber 转写英语，再由 TranslationSession 的低延迟策略翻译 | 无 API 费用；首次下载 Apple 语言资源后在本机处理 |
-| 豆包云端 | 通过 WebSocket 将所选音频发送至火山引擎同声传译服务 | 使用自己的凭据，按服务用量计费 |
+| 识别与翻译 | SpeechAnalyzer / SpeechTranscriber 转写，再由 TranslationSession 低延迟翻译 | WebSocket 连接火山引擎同声传译服务 |
+| 费用 | 无 API 费用 | 使用自己的凭据，按服务用量计费 |
+| 声音与文字 | 下载语言资源后在本机处理 | 所选音频发送至火山引擎 |
 
-字幕随识别结果更新，停止时收尾并保存已收到的中英文本。不保存录音。本地模式不会自动切换到付费服务。
+本地模式使用 Apple 的专用语音识别与翻译模型，**不是调用通用聊天大模型**，也不会自动切换到付费服务。默认记录目录为 `~/Library/Application Support/TalkFloat/Recordings`；0.8.7 不自动导入早期 Saylori 记录，用户选定的自定义目录保持不变。
 
-## 安装
+目前仅支持英语 → 简体中文，App 界面为简体中文。麦克风门限与语音突显可以减少背景声，但不能保证只识别本人；数字、姓名和专业术语请核对。使用前请告知会议参与者。
 
-**Apple Silicon（M 系列）Mac。** 本地模式需要 **macOS 26.4+**；豆包模式声明最低 macOS 14.2，较早系统仍待完整实机验证。暂不提供 Intel 版本。
-
-1. 在 [Releases](https://github.com/jinhan261/talkfloat/releases) 下载 `TalkFloat-版本号-macOS-arm64.dmg`。
-2. 打开 DMG，将 **TalkFloat** 拖入 **Applications**。
-3. 从 Applications 启动，点击屏幕右上角的菜单栏图标。
-
-发布的 DMG 使用 Developer ID 签名并通过 Apple 公证，附有 SHA256 校验文件。当前仓库保持私有，下载需要登录有访问权限的 GitHub 账号。
-
-升级前先结束并保存会话、退出旧版，再替换原 App。只保留一个安装位置；如果旧版位于 `~/Applications`，请替换那里或先移除旧版。
-
-## 使用
-
-1. **选模式**：本地模式点击“准备本地语言模型”；豆包模式在“设置 → 服务连接”填写 API Key，或 App ID 与 Access Token。
-2. **选音源**：选择全部系统声音或 Chrome；需要自己的发言时开启麦克风。按 macOS 提示授予相应采音权限。
-3. **开始翻译**：播放英语或开始会议，悬浮窗口显示中英字幕；可暂停和继续。
-4. **结束并存档**：每场会话生成一个 `.md` 文件。保存位置可在“设置 → 会议记录”更改。
-
-目前仅支持英语 → 简体中文。来源标签表示采音通道，麦克风过滤不能保证只识别本人；数字、姓名及专业术语请核对。使用前请告知会议参与者。
-
-[隐私说明](PRIVACY.md) · [源码构建](docs/development.md) · [架构](docs/architecture.md) · [反馈问题](https://github.com/jinhan261/talkfloat/issues)
+[隐私说明](PRIVACY.md) · [源码构建](docs/development.md) · [架构](docs/architecture.md) · [参与贡献](CONTRIBUTING.md)
 
 ## 许可证
 
-应用代码采用 [MIT](LICENSE)，SpeexDSP 保留其 [BSD 许可证](native/Sources/SpeexDSP/COPYING)。Apple 语言模型和豆包服务遵循各自条款，不随项目分发。
+[MIT](LICENSE) © 2026 jinhan261。SpeexDSP 保留其 [BSD 许可证](native/Sources/SpeexDSP/COPYING)。Apple 语言模型与豆包服务遵循各自条款，不随项目分发。演示中的第三方视频内容不属于 MIT 授权范围，详见[素材说明](docs/assets/README.md)。

@@ -25,6 +25,15 @@ __pycache__/
 !/docs/development.md
 !/docs/code-review.md
 !/docs/distribution.md
+!/docs/assets/
+/docs/assets/*
+!/docs/assets/README.md
+!/docs/assets/caption-light.png
+!/docs/assets/caption-dark.png
+!/docs/assets/menu-light.png
+!/docs/assets/menu-dark.png
+!/docs/assets/live-demo.gif
+!/docs/assets/live-captions.png
 /recordings/
 /artifacts/
 *.log

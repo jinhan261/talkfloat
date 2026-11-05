@@ -70,7 +70,7 @@ git diff --cached --stat
 
 ## TalkFloat 改名兼容
 
-0.8.0 对外名称、可执行文件、App/ZIP 和错误提示均为 TalkFloat。为了沿用已有授权、偏好和记录，Bundle ID `app.saylori.mac`、钥匙串 service `app.saylori.credentials`、内部通知名以及 `Saylori/Recordings` 保持稳定；源码的 SayloriCore 模块名同样保留。SPM 主可执行目标改为 TalkFloat，源文件目录通过 path 显式指定。后续若改这些持久化标识，必须先实施并验证迁移。
+0.8.0 对外名称、可执行文件、App/ZIP 和错误提示均为 TalkFloat。为了沿用已有授权、偏好和记录，Bundle ID `app.saylori.mac`、钥匙串 service `app.saylori.credentials`和内部通知名保持稳定；源码的 SayloriCore 模块名同样保留。SPM 主可执行目标改为 TalkFloat，源文件目录通过 path 显式指定。后续若改这些持久化标识，必须先实施并验证迁移。
 
 2026-11-03 按用户要求将 GitHub 仓库从 `jinhan261/saylori` 改为 `jinhan261/talkfloat`，README 和当前 Git remote 同步。此为同一仓库改名，历史和 private 状态保留；不改变上述 App 持久化身份，也不移动开发者现有工作目录。
 
@@ -93,3 +93,5 @@ git diff --cached --stat
 仅授予 TalkFloat“仅系统录音”，撤销其录屏授权后测试。若系统仍显示开关开启但日志报告签名 requirement 不匹配，按 macOS 正常设置流程刷新对应 App 的旧音频授权；不要重置所有应用或修改 TCC 数据库。麦克风是独立权限，不能用其权限替代系统音频权限。
 
 Chrome 测试先确认标签页实际有声：自动化工具可能将测试标签页静音，页面进度条走完不等于向系统输出了音频。正向播放 Chrome 样音；反向使用其他播放器播放另一份样音，并确认 Chrome-only 记录不含该句。测试输出与真实会议记录仍只留本机。
+
+0.8.7 默认存储改为 `~/Library/Application Support/TalkFloat/Recordings`，Recovery 同样位于 TalkFloat 下；不自动恢复旧 Saylori 目录。用户选定的自定义目录不变。

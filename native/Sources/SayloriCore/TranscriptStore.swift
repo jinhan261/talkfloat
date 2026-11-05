@@ -3,7 +3,7 @@ import Foundation
 /// Only Markdown goes into the user's chosen folder. Private, atomic checkpoints
 /// retain received text until an ended record has been written successfully.
 public actor TranscriptStore {
-    public static let defaultDirectory=FileManager.default.urls(for:.applicationSupportDirectory,in:.userDomainMask)[0].appendingPathComponent("Saylori/Recordings",isDirectory:true)
+    public static let defaultDirectory=FileManager.default.urls(for:.applicationSupportDirectory,in:.userDomainMask)[0].appendingPathComponent("TalkFloat/Recordings",isDirectory:true)
     public static let defaultRecoveryDirectory=defaultDirectory.deletingLastPathComponent().appendingPathComponent("Recovery",isDirectory:true)
     private var directory:URL
     private let recoveryDirectory:URL
