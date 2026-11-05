@@ -48,7 +48,7 @@
   </picture>
 </p>
 
-The DMG is Developer ID signed and Apple notarized, with a SHA256 checksum. This repository is currently private; downloads require a GitHub account with access. Before upgrading, finish the session and quit the old version, then replace the app. Keep only one installed copy.
+The DMG is Developer ID signed and Apple notarized, with a SHA256 checksum. TalkFloat is open source under the MIT license. Source code and installers are publicly available; no GitHub sign-in is required. Before upgrading, finish the session and quit the old version, then replace the app. Keep only one installed copy.
 
 ## How it works
 

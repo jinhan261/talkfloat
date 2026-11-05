@@ -15,7 +15,7 @@ scripts/build-app.sh
 
 ### 从源码安装
 
-需要完整 Xcode 与包含 macOS 26.4 Speech / Translation API 的 SDK。当前私有阶段还需仓库访问权限。
+需要完整 Xcode 与包含 macOS 26.4 Speech / Translation API 的 SDK。仓库已公开，可直接 clone。
 
 ```sh
 git clone https://github.com/jinhan261/talkfloat.git
