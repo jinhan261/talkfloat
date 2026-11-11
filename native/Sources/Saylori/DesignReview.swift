@@ -28,7 +28,9 @@ import SayloriCore
             model.mode = .local
             export(SourcePicker(model:model).sourceList.padding(.top,8).background(Brand.card),name:"\(name)-sources",scheme:scheme,directory:directory)
             model.showingSettings=true
-            export(PanelView(model:model),name:"\(name)-settings",scheme:scheme,directory:directory)
+            export(SettingsView(model:model,setup:SetupCoordinator(model:model),updates:AppUpdater(model:model,enabled:false)).frame(width:640,height:560),name:"\(name)-settings",scheme:scheme,directory:directory)
+            let setup=SetupCoordinator(model:model)
+            for step in 0..<3 { setup.step=step;export(SetupView(setup:setup,model:model),name:"\(name)-setup-\(step)",scheme:scheme,directory:directory) }
             model.access.draft.legacy=true;model.access.draft.appID="1234567890";model.access.draft.accessToken="design-example-not-a-real-token"
             export(ConnectionSettings(model:model,access:model.access).padding(Brand.inset).frame(width:Brand.width).background(Brand.surface),name:"\(name)-connection",scheme:scheme,directory:directory)
             export(ArchiveSettings(model:model).padding(Brand.inset).frame(width:Brand.width).background(Brand.surface),name:"\(name)-archive",scheme:scheme,directory:directory)

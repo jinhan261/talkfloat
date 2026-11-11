@@ -15,9 +15,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.8.7</string>
+	<string>0.9.0</string>
 	<key>CFBundleVersion</key>
-	<string>39</string>
+    <string>41</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.2</string>
 	<key>LSUIElement</key>
@@ -28,5 +28,27 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>TalkFloat 收听你选择的麦克风，将你的英语发言转为中英字幕并保存文字；不保存录音。</string>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/jinhan261/talkfloat/main/docs/updates/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>Z9DVtGN0I7KrY4VHNjJPNxQBk5glNXRCeIVQN46stmw=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
+	<key>SUAutomaticallyUpdate</key>
+	<false/>
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
+	<key>SUVerifyUpdateBeforeExtraction</key>
+	<true/>
+	<key>SUShowReleaseNotes</key>
+	<true/>
+	<key>SUAllowsAutomaticUpdates</key>
+	<false/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>zh_CN</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>zh_CN</string>
+	</array>
 </dict>
 </plist>

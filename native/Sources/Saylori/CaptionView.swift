@@ -5,6 +5,7 @@ import SayloriCore
 struct CaptionView:View {
     @ObservedObject var model:SessionModel
     @State private var copied=false
+    @State private var hovering=false
     private var ink:Color{model.captionStyle.foreground}
     private var current:CaptionSegment?{model.displayCurrent}
     private var currentText:String {
@@ -28,14 +29,14 @@ struct CaptionView:View {
                     Spacer(minLength:8)
                 }.foregroundStyle(ink.opacity(0.8)).frame(height:30)
                     .help(model.locked ? "位置已锁定":"按住文字或空白处拖动字幕窗")
-                CaptionTool(icon:copied ? "checkmark":"doc.on.doc",label:copied ? "已复制":"复制当前中英内容",ink:ink){
+                CaptionTool(icon:copied ? "checkmark":"doc.on.doc",label:copied ? "已复制":"复制当前中英内容",ink:ink,quiet:!hovering && !model.previewing){
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString([currentSource,model.previewing ? currentText:(current?.translation ?? "")].filter{!$0.isEmpty}.joined(separator:"\n"),forType:.string)
                     copied=true;Task{try? await Task.sleep(for:.seconds(1.5));copied=false}
                 }
-                CaptionTool(icon:model.locked ? "lock.fill":"lock.open",label:model.locked ? "解锁字幕位置":"锁定字幕位置",active:model.locked,ink:ink){model.toggleLock()}
-                CaptionTool(icon:"slider.horizontal.3",label:"字幕设置",ink:ink){model.openSettings()}
-                CaptionTool(icon:"xmark",label:"隐藏字幕",ink:ink){model.toggleCaption()}
+                CaptionTool(icon:model.locked ? "lock.fill":"lock.open",label:model.locked ? "解锁字幕位置":"锁定字幕位置",active:model.locked,ink:ink,quiet:!hovering && !model.previewing){model.toggleLock()}
+                CaptionTool(icon:"slider.horizontal.3",label:"字幕设置",ink:ink,quiet:!hovering && !model.previewing){model.openSettings()}
+                CaptionTool(icon:"xmark",label:"隐藏字幕",ink:ink,quiet:!hovering && !model.previewing){model.toggleCaption()}
             }.foregroundStyle(ink)
             ScrollView {
                 VStack(alignment:.leading,spacing:9){
@@ -71,7 +72,7 @@ struct CaptionView:View {
                     .accessibilityLabel("最近内容，最新在上，\(model.previewing ? 1:history.count)段")
             }.frame(minHeight:56)
             if !model.archiveError.isEmpty {Text(model.archiveError).font(.caption).foregroundStyle(.red)}
-        }.padding(.horizontal,20).padding(.top,12).padding(.bottom,20)
+        }.padding(.horizontal,20).padding(.top,12).padding(.bottom,20).onHover{hovering=$0}
             .background(CaptionBackground(style:model.captionStyle,opacity:model.backgroundOpacity))
             .clipShape(RoundedRectangle(cornerRadius:20,style:.continuous))
             .overlay(RoundedRectangle(cornerRadius:20,style:.continuous).stroke(ink.opacity(0.09),lineWidth:0.5)).tint(ink)

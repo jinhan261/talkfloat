@@ -3,8 +3,8 @@ import AppKit
 
 // Shared macOS metrics: one reading edge, quiet surfaces, one functional accent.
 enum Brand {
-    static let width:CGFloat=336
-    static let inset:CGFloat=16
+    static let width:CGFloat=348
+    static let inset:CGFloat=18
     static let radius:CGFloat=12
     // Neutral brand surfaces; blue is reserved for selection, focus and feedback.
     static let action=neutral(0.16,0.88)

@@ -24,7 +24,8 @@ fi
 mkdir -p "$BUILD_ROOT" "$PROJECT_ROOT/dist"
 swift build --package-path native --scratch-path "$BUILD_ROOT" --arch arm64 -c release > "$BUILD_ROOT/release.log" 2>&1 || { tail -n 60 "$BUILD_ROOT/release.log"; exit 1; }
 BIN_DIR=$(swift build --package-path native --scratch-path "$BUILD_ROOT" --arch arm64 -c release --show-bin-path)
-"$BIN_DIR/TalkFloat" --render-brand-icon "$PROJECT_ROOT/native/Resources/AppIcon.png"
+# The app now links Sparkle. Render from the assembled bundle after its
+# framework has been embedded, not from a bare SwiftPM executable.
 APP_PATH="$PROJECT_ROOT/dist/Build.noindex/TalkFloat.app"
 STAGING=$(mktemp -d "$BUILD_ROOT/app-stage.XXXXXX")
 cleanup() {
@@ -41,6 +42,12 @@ cp "$BIN_DIR/TalkFloat" "$APP_PATH/Contents/MacOS/TalkFloat"
 cp native/Resources/Info.plist "$APP_PATH/Contents/Info.plist"
 cp LICENSE "$APP_PATH/Contents/Resources/TalkFloat-LICENSE.txt"
 cp native/Sources/SpeexDSP/COPYING "$APP_PATH/Contents/Resources/SpeexDSP-LICENSE.txt"
+cp native/Tests/Fixtures/english-meeting-v2.aiff "$APP_PATH/Contents/Resources/EnglishSample.aiff"
+SPARKLE_ROOT="$BUILD_ROOT/artifacts/sparkle/Sparkle"
+SPARKLE_FRAMEWORK="$SPARKLE_ROOT/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
+mkdir -p "$APP_PATH/Contents/Frameworks"
+ditto "$SPARKLE_FRAMEWORK" "$APP_PATH/Contents/Frameworks/Sparkle.framework"
+if [[ -f "$SPARKLE_ROOT/LICENSE" ]]; then cp "$SPARKLE_ROOT/LICENSE" "$APP_PATH/Contents/Resources/Sparkle-LICENSE.txt"; fi
 ICONSET="$BUILD_ROOT/AppIcon.iconset"
 mkdir -p "$ICONSET"
 for dimension in 16 32 128 256 512; do
@@ -49,8 +56,15 @@ for dimension in 16 32 128 256 512; do
     sips -z "$doubled" "$doubled" native/Resources/AppIcon.png --out "$ICONSET/icon_${dimension}x${dimension}@2x.png" >/dev/null
 done
 iconutil -c icns "$ICONSET" -o "$APP_PATH/Contents/Resources/AppIcon.icns"
-SIGN_OPTIONS=(--force --options runtime)
-if [[ "$IDENTITY" != "-" ]]; then SIGN_OPTIONS+=(--timestamp); fi
+SIGN_OPTIONS=(--force)
+if [[ "$IDENTITY" != "-" ]]; then SIGN_OPTIONS+=(--options runtime --timestamp); fi
+FRAMEWORK="$APP_PATH/Contents/Frameworks/Sparkle.framework/Versions/B"
+# Sign executable leaves before their enclosing bundles, preserving Sparkle's
+# helper entitlements. Never use --deep as a substitute for inside-out signing.
+for component in "$FRAMEWORK/Autoupdate" "$FRAMEWORK/Updater.app" "$FRAMEWORK/XPCServices/Downloader.xpc" "$FRAMEWORK/XPCServices/Installer.xpc"; do
+    if [[ -e "$component" ]]; then codesign "${SIGN_OPTIONS[@]}" --preserve-metadata=entitlements --sign "$IDENTITY" "$component"; fi
+done
+codesign "${SIGN_OPTIONS[@]}" --sign "$IDENTITY" "$APP_PATH/Contents/Frameworks/Sparkle.framework"
 codesign "${SIGN_OPTIONS[@]}" --sign "$IDENTITY" --entitlements native/Resources/TalkFloat.entitlements "$APP_PATH"
 codesign --verify --deep --strict "$APP_PATH"
 APP_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_PATH/Contents/Info.plist")

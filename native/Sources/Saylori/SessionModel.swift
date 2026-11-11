@@ -17,6 +17,7 @@ import Combine
     @Published var previewDrafts:[CaptionSegment]=[]
     @Published var localModelsReady=false
     @Published var preparingLocalModels=false
+    var modelPreparationID=UUID()
     @Published var localModelNotice=""
     private let previewGate=PreviewAudioGate()
     private let echoCanceller=ReferenceEchoCanceller()
@@ -42,6 +43,17 @@ import Combine
     @Published var visible=true
     @Published var locked=false
     @Published var showingSettings=false
+    @Published var settingsSection:SettingsSection = .general
+    @Published var setupInProgress=false
+    @Published var updateInstallationInProgress=false
+    @Published var updateAvailable=false
+    @Published var archivePickerOpen=false
+    @Published var audioProbe:AudioProbeResult?
+    @Published var systemSignalObserved=false
+    var systemAudioSummary:String{systemSignalObserved ? "最近一次采音已收到声音。每次开始翻译时仍会检查输入。":(audioProbe?.message ?? "在首次设置中检测实际声音输入，无需录屏权限。")}
+    var safeToUpdate:Bool{UpdateSafety.canInstall(active:active,hasMeeting:hasMeeting,preparingModels:preparingLocalModels,setupBusy:setupInProgress,hasSaveError:!archiveError.isEmpty,editingSettings:archivePickerOpen || changingArchiveDirectory || connectionChecking || access.working)}
+    var onSetup:(()->Void)?
+    var onCheckUpdates:(()->Void)?
     @Published var captionStyle=CaptionStyle(rawValue:UserDefaults.standard.string(forKey:"captionStyle") ?? "glass") ?? .glass {
         didSet{savePreference(captionStyle.rawValue,forKey:"captionStyle");TestDiagnostics.update(["captionStyle":captionStyle.rawValue])}
     }
@@ -159,7 +171,7 @@ import Combine
         connectionResult=await testConnection()
     }
     func start(){
-        guard !active else{return}
+        guard !active,!updateInstallationInProgress else{return}
         guard meeting?.endedAt == nil else{notice="请先重试保存上一次记录";return}
         guard archiveLocationError.isEmpty else{notice=archiveLocationError;return}
         guard canStart else{notice="请在设置中连接豆包同传";return}
@@ -188,7 +200,8 @@ import Combine
             let preview=await makeFastPreview(sessionID:service.sessionID,origin:.system)
             guard token==generation,!Task.isCancelled else{if #available(macOS 26.4,*),let preview=preview as? FastPreview{await preview.stop()};return}
             fastSystem=preview
-            audio.onLevel={[weak self] value in Task{@MainActor in guard self?.generation==token else{return};self?.level=value}}
+            systemSignalObserved=false
+            audio.onLevel={[weak self] value in Task{@MainActor in guard let self,self.generation==token else{return};self.level=value;if value>0.001 && !self.systemSignalObserved{self.systemSignalObserved=true}}}
             TestDiagnostics.record("capture-start",["source":source.id,"credentialMode":credentials.legacy ? "App ID / Token":"API Key","configured":configured])
             let selectedSource=source
             try await audio.start(source:selectedSource)
@@ -511,21 +524,21 @@ import Combine
     }
     func revealLatestArchive(){if let archiveURL{NSWorkspace.shared.activateFileViewerSelecting([archiveURL])}}
     func resetCaption(){visible=true;onResetCaption?()}
-    func openSettings(){showingSettings=true;onSettings?()}
+    func openSettings(section:SettingsSection = .appearance){settingsSection=section;showingSettings=true;onSettings?()}
     func previewCaption(){guard !hasMeeting else{return};previewing=true;visible=true;onVisibility?(true);onPreview?()}
     func toggleCaption(){visible.toggle();onVisibility?(visible)}
     func toggleLock(){locked.toggle();onLock?(locked)}
-    func testAudio() async -> String {
+    func testAudio(duration:TimeInterval=6) async -> String {
         guard !active && !hasMeeting else { return "请先结束当前会话" }
-        let token=UUID(); generation=token; phase = .checking; level=0
+        let token=UUID(); generation=token; phase = .checking; level=0;audioProbe=nil;systemSignalObserved=false
         let audio=SystemAudio();capture=audio
-        audio.onLevel={[weak self] value in Task{@MainActor in if self?.generation==token{self?.level=value}}}
+        audio.onLevel={[weak self] value in Task{@MainActor in if let self,self.generation==token{self.level=value;if value>0.001 && !self.systemSignalObserved{self.systemSignalObserved=true}}}}
         var bytes=0;var peak:Float=0
         do{
             let selectedSource=source
             try await Task.detached { try await audio.start(source:selectedSource) }.value
             guard token==generation else{audio.stop();return "检测已结束"}
-            let deadline=Task{try? await Task.sleep(for:.seconds(8));audio.stop()}
+            let deadline=Task{try? await Task.sleep(for:.seconds(duration));audio.stop()}
             defer{deadline.cancel()}
             for try await frame in audio.frames{
                 bytes+=frame.data.count
@@ -537,7 +550,8 @@ import Combine
                 }
             }
             audio.stop();guard generation==token else{return "检测已结束"};capture=nil;phase = .idle;level=0
-            let result=bytes>0 && peak>0.001 ? "已捕获\(source.name)，可以开始翻译。" : "未检测到声音。请播放一段英语后重试，并确认系统设置的“仅系统录音”已允许 TalkFloat；无需开启录屏。"
+            let probe=AudioProbeResult(bytes:bytes,peak:peak);audioProbe=probe
+            let result=probe.message
             if CommandLine.arguments.contains("--audio-check") {
                 let report:[String:Any]=["bytes":bytes,"peak":peak,"seconds":Double(bytes)/32000,"result":result]
                 if let data=try? JSONSerialization.data(withJSONObject:report,options:.prettyPrinted){try? data.write(to:URL(fileURLWithPath:NSTemporaryDirectory()).appendingPathComponent("saylori-audio-check.json"))}

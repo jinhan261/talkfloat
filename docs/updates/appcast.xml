@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+  <channel>
+    <title>TalkFloat Preview Updates</title>
+    <link>https://github.com/jinhan261/talkfloat</link>
+    <description>Signed TalkFloat releases for Apple Silicon.</description>
+    <language>zh-cn</language>
+    <item>
+      <title>TalkFloat 0.9.0</title>
+      <pubDate>Wed, 11 Nov 2026 15:01:25 GMT</pubDate>
+      <sparkle:version>41</sparkle:version>
+      <sparkle:shortVersionString>0.9.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.2</sparkle:minimumSystemVersion>
+      <description>首次设置与声音测试；独立设置窗口；安全更新；更轻量的菜单和字幕。安装前请结束并保存当前会话。本地模型仍要求 macOS 26.4+。</description>
+      <enclosure url="https://github.com/jinhan261/talkfloat/releases/download/v0.9.0/TalkFloat-0.9.0-macOS-arm64.dmg" length="2813492" type="application/octet-stream" sparkle:edSignature="KC9JMnK5wrTluAjylJlzmGNXOjlGFB/tlxxMgn0bWKeSuNzra/fq58oXoPvOPvWWU3SKa5f5LjB6oqNc2U/+Bg==" sparkle:os="macos" />
+    </item>
+  </channel>
+</rss>

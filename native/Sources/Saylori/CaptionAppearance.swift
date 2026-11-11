@@ -71,14 +71,17 @@ struct CaptionTool:View {
     let label:String
     var active=false
     var ink:Color = .primary
+    var quiet=false
     let action:()->Void
     @State private var hovered=false
+    @FocusState private var focused:Bool
     var body:some View {
         Button(action:action){
             Image(systemName:icon).font(.system(size:11,weight:.medium))
                 .frame(width:28,height:28)
                 .background(ink.opacity(hovered || active ? 0.09:0),in:RoundedRectangle(cornerRadius:6))
         }.buttonStyle(.plain).foregroundStyle(ink.opacity(hovered || active ? 0.95:0.60))
+            .focused($focused).opacity(quiet && !hovered && !active && !focused ? 0:1)
             .help(label).accessibilityLabel(label).onHover{hovered=$0}
     }
 }

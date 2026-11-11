@@ -12,6 +12,10 @@ import SayloriCore
     private var subscriptions=Set<AnyCancellable>()
     private var terminating=false
     private var harness:Task<Void,Never>?
+    private lazy var setup=SetupCoordinator(model:model)
+    private lazy var updates=AppUpdater(model:model,enabled:TestDiagnostics.directory == nil && !CommandLine.arguments.contains("--ui-review"))
+    private var settingsWindow:NSWindow?
+    private var setupWindow:NSWindow?
     func applicationDidFinishLaunching(_ notification:Notification){
         NSApp.setActivationPolicy(.accessory)
         if CommandLine.arguments.contains("--dark-appearance"){NSApp.appearance=NSAppearance(named:.darkAqua)}
@@ -28,8 +32,9 @@ import SayloriCore
         // UI inspection can pin this transient surface without changing ordinary launches.
         popover.behavior = CommandLine.arguments.contains("--pin-test-popover") ? .applicationDefined:.transient
         let appearanceOverride:ColorScheme?=CommandLine.arguments.contains("--dark-appearance") ? .dark:nil
-        popover.contentViewController=NSHostingController(rootView:PanelView(model:model).preferredColorScheme(appearanceOverride))
-        popover.contentSize=NSSize(width:Brand.width,height:400)
+        let menuHost=NSHostingController(rootView:MenuPopoverContent(model:model,maximumHeight:max(320,(status.button?.window?.screen?.visibleFrame.height ?? 800)-80)).preferredColorScheme(appearanceOverride))
+        menuHost.sizingOptions = [.preferredContentSize]
+        popover.contentViewController=menuHost
         panel=SubtitlePanel(contentRect:NSRect(x:0,y:0,width:720,height:340),styleMask:[.borderless,.nonactivatingPanel,.resizable],backing:.buffered,defer:false)
         panel.title="TalkFloat 字幕";panel.level = .floating;panel.isFloatingPanel=true
         panel.collectionBehavior=[.canJoinAllSpaces,.fullScreenAuxiliary]
@@ -38,7 +43,11 @@ import SayloriCore
         panel.hidesOnDeactivate=false;panel.delegate=self
         panel.contentView=NSHostingView(rootView:CaptionView(model:model).preferredColorScheme(appearanceOverride))
         placePanel()
-        model.onSettings={[weak self] in self?.showPopover()}
+        model.onSettings={[weak self] in self?.showSettings()}
+        model.onSetup={[weak self] in self?.showSetup()}
+        model.onCheckUpdates={[weak self] in self?.model.settingsSection = .about;self?.showSettings();self?.updates.check()}
+        setup.onClose={[weak self] in self?.setupWindow?.close();self?.showPopover()}
+        _ = updates
         model.onPreview={[weak self] in
             self?.popover.performClose(nil)
             if CommandLine.arguments.contains("--ui-review"){
@@ -70,7 +79,9 @@ import SayloriCore
         NotificationCenter.default.addObserver(self,selector:#selector(screenChanged),name:NSApplication.didChangeScreenParametersNotification,object:nil)
         DistributedNotificationCenter.default().addObserver(self,selector:#selector(showExistingInstance),name:Notification.Name("app.saylori.show"),object:nil)
         DispatchQueue.main.asyncAfter(deadline:.now()+0.5){[self] in
-            self.showPopover()
+            if !UserDefaults.standard.bool(forKey:"setupSeenV1"),TestDiagnostics.directory == nil,!CommandLine.arguments.contains("--audio-check"),!CommandLine.arguments.contains("--preview-caption") {
+                self.showSetup()
+            }else{self.showPopover()}
             if CommandLine.arguments.contains("--ui-review") || TestDiagnostics.directory != nil {
                 let runner=AppTestHarness(model:self.model,panel:self.panel,popover:self.popover,
                     showPopover:{[weak self] in self?.showPopover()},resetPanel:{[weak self] in self?.resetPanel()})
@@ -89,6 +100,9 @@ import SayloriCore
         let appItem=NSMenuItem();menu.addItem(appItem)
         let appMenu=NSMenu(title:"TalkFloat");appItem.submenu=appMenu
         appMenu.addItem(withTitle:"关于 TalkFloat",action:#selector(NSApplication.orderFrontStandardAboutPanel(_:)),keyEquivalent:"")
+        let settingsItem=appMenu.addItem(withTitle:"设置…",action:#selector(openSettingsWindow),keyEquivalent:",");settingsItem.target=self
+        let setupItem=appMenu.addItem(withTitle:"首次设置与声音测试…",action:#selector(openSetupWindow),keyEquivalent:"");setupItem.target=self
+        let updateItem=appMenu.addItem(withTitle:"检查更新…",action:#selector(checkForUpdates),keyEquivalent:"");updateItem.target=self
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle:"退出 TalkFloat",action:#selector(NSApplication.terminate(_:)),keyEquivalent:"q")
         let editItem=NSMenuItem();menu.addItem(editItem)
@@ -99,6 +113,36 @@ import SayloriCore
         NSApp.mainMenu=menu
     }
     func applicationShouldHandleReopen(_ sender:NSApplication,hasVisibleWindows flag:Bool)->Bool{showPopover();return false}
+    @objc private func openSettingsWindow(){model.settingsSection = .general;showSettings()}
+    @objc private func openSetupWindow(){showSetup()}
+    @objc private func checkForUpdates(){model.settingsSection = .about;showSettings();updates.check()}
+    private func showSettings(){
+        popover.performClose(nil)
+        if settingsWindow==nil{
+            let window=NSWindow(contentRect:NSRect(x:0,y:0,width:640,height:560),styleMask:[.titled,.closable,.miniaturizable,.resizable],backing:.buffered,defer:false)
+            window.title="TalkFloat 设置";window.isReleasedWhenClosed=false
+            window.contentView=NSHostingView(rootView:SettingsView(model:model,setup:setup,updates:updates))
+            window.minSize=NSSize(width:620,height:550);window.setFrameAutosaveName("TalkFloatSettings");window.center();settingsWindow=window
+        }
+        settingsWindow?.makeKeyAndOrderFront(nil);NSApp.activate(ignoringOtherApps:true)
+    }
+    private func showSetup(){
+        guard !model.active,!model.hasMeeting,!updates.installing else{showPopover();return}
+        popover.performClose(nil)
+        if setupWindow==nil{
+            let window=NSWindow(contentRect:NSRect(x:0,y:0,width:500,height:552),styleMask:[.titled,.closable],backing:.buffered,defer:false)
+            window.title="开始使用 TalkFloat";window.isReleasedWhenClosed=false;window.delegate=self
+            window.contentView=NSHostingView(rootView:SetupView(setup:setup,model:model));window.center();setupWindow=window
+        }
+        setupWindow?.makeKeyAndOrderFront(nil);NSApp.activate(ignoringOtherApps:true)
+    }
+    func windowShouldClose(_ sender:NSWindow)->Bool{
+        if sender===setupWindow,model.preparingLocalModels{return false}
+        return true
+    }
+    func windowWillClose(_ notification:Notification){
+        if notification.object as? NSWindow === setupWindow{setup.cancel();UserDefaults.standard.set(true,forKey:"setupSeenV1")}
+    }
     private func showPopover(){
         guard !popover.isShown,let button=status.button else{return}
         model.refreshSources();NSApp.activate(ignoringOtherApps:true)
@@ -129,12 +173,14 @@ import SayloriCore
     }
     @objc private func screenChanged(){clampPanel()}
     func windowDidMove(_ notification:Notification){
+        guard notification.object as? NSWindow === panel else{return}
         UserDefaults.standard.set(NSStringFromPoint(panel.frame.origin),forKey:"captionOrigin")
         TestDiagnostics.record("position",["frame":NSStringFromRect(panel.frame),"locked":model.locked])
     }
-    func windowDidResize(_ notification:Notification){UserDefaults.standard.set(NSStringFromSize(panel.frame.size),forKey:"captionSize")}
+    func windowDidResize(_ notification:Notification){guard notification.object as? NSWindow === panel else{return};UserDefaults.standard.set(NSStringFromSize(panel.frame.size),forKey:"captionSize")}
     func applicationShouldTerminate(_ sender:NSApplication)->NSApplication.TerminateReply {
         guard !terminating else{return .terminateNow};terminating=true
-        Task{let saved=await model.finishForQuit();if !saved{terminating=false;showPopover()};NSApp.reply(toApplicationShouldTerminate:saved)};return .terminateLater
+        setup.cancel();updates.shutdown()
+        Task{let saved=await model.finishForQuit();if !saved{terminating=false;updates.resumeAfterCancelledQuit();showPopover()};NSApp.reply(toApplicationShouldTerminate:saved)};return .terminateLater
     }
 }

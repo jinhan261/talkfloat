@@ -4,12 +4,12 @@
   <p><strong>听英语，看中文。字幕浮在你正在用的 App 上。</strong></p>
   <p>原生 macOS 菜单栏工具 · 英语 → 简体中文</p>
   <p>
-    <a href="https://github.com/jinhan261/talkfloat/releases/tag/v0.8.7"><img src="https://img.shields.io/badge/preview-v0.8.7-3478F6?style=flat&amp;labelColor=333333" alt="预览版 0.8.7"></a>
+    <a href="https://github.com/jinhan261/talkfloat/releases/tag/v0.9.0"><img src="https://img.shields.io/badge/preview-v0.9.0-3478F6?style=flat&amp;labelColor=333333" alt="预览版 0.9.0"></a>
     <img src="https://img.shields.io/badge/macOS-26.4%2B-555555?style=flat&amp;logo=apple&amp;logoColor=white&amp;labelColor=333333" alt="本地模型需要 macOS 26.4+">
     <img src="https://img.shields.io/badge/chip-Apple_Silicon-555555?style=flat&amp;labelColor=333333" alt="Apple Silicon">
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-555555?style=flat&amp;labelColor=333333" alt="MIT 许可证"></a>
   </p>
-  <p><a href="https://github.com/jinhan261/talkfloat/releases/tag/v0.8.7"><strong>下载 DMG</strong></a> · <a href="#开始使用">使用说明</a> · <a href="https://github.com/jinhan261/talkfloat/issues">反馈问题</a></p>
+  <p><a href="https://github.com/jinhan261/talkfloat/releases/tag/v0.9.0"><strong>下载 DMG</strong></a> · <a href="#开始使用">使用说明</a> · <a href="https://github.com/jinhan261/talkfloat/issues">反馈问题</a></p>
   <p><strong>简体中文</strong> · <a href="README.en.md">English</a></p>
 </div>
 
@@ -36,8 +36,8 @@
 
 **Apple 芯片 Mac，推荐 macOS 26.4 或更新版本。** 本地模型要求 26.4+；豆包模式声明最低 14.2，较早系统尚待完整实机验证。暂不提供 Intel 版。
 
-1. **安装** — 从 [Releases](https://github.com/jinhan261/talkfloat/releases/tag/v0.8.7) 下载 DMG，将 TalkFloat 拖入 Applications，再从那里打开。App 位于右上角菜单栏。
-2. **选择模型** — 本地模式首次准备 Apple 语言资源；豆包模式在设置里填写自己的 API Key，或 App ID / Access Token。
+1. **安装** — 从 [Releases](https://github.com/jinhan261/talkfloat/releases/tag/v0.9.0) 下载 DMG，将 TalkFloat 拖入 Applications，再从那里打开。App 位于右上角菜单栏。
+2. **完成首次设置** — 选择模型、检测系统声音，再播放一段内置英语验证字幕和存档。本地模式按需下载 Apple 语言资源；豆包模式填写自己的 API Key 或 App ID / Access Token。
 3. **开始翻译** — 选系统音源，需要时打开麦克风，再点击「开始翻译」。仅需相应的系统录音和麦克风权限，**不需要录屏权限**。
 4. **结束并查看记录** — 点击「结束并存档」，从「会议记录」打开 Markdown；在设置里更改存储文件夹。
 
@@ -48,7 +48,7 @@
   </picture>
 </p>
 
-DMG 已使用 Developer ID 签名并通过 Apple 公证，附 SHA256 校验文件。项目以 MIT 许可证开源，源码与安装包均可直接获取，无需登录 GitHub。升级前结束会话并退出旧版，再替换 App，避免同时保留多个安装副本。
+DMG 已使用 Developer ID 签名并通过 Apple 公证，附 SHA256 校验文件。项目以 MIT 许可证开源，源码与安装包均可直接获取，无需登录 GitHub。0.9.0 起可从「更多 → 检查更新」安装新版本；可选自动检查默认关闭，更新需要确认，进行中或暂停的会议会阻止安装。首次从 0.8.x 升级仍需结束会话、退出旧版后手动替换 App。
 
 ## 如何实现
 
@@ -68,4 +68,4 @@ DMG 已使用 Developer ID 签名并通过 Apple 公证，附 SHA256 校验文�
 
 ## 许可证
 
-[MIT](LICENSE) © 2026 jinhan261。SpeexDSP 保留其 [BSD 许可证](native/Sources/SpeexDSP/COPYING)。Apple 语言模型与豆包服务遵循各自条款，不随项目分发。演示中的第三方视频内容不属于 MIT 授权范围，详见[素材说明](docs/assets/README.md)。
+[MIT](LICENSE) © 2026 jinhan261。SpeexDSP 保留其 [BSD 许可证](native/Sources/SpeexDSP/COPYING)，更新器采用 [Sparkle（MIT）](https://github.com/sparkle-project/Sparkle)。Apple 语言模型与豆包服务遵循各自条款，不随项目分发。演示中的第三方视频内容不属于 MIT 授权范围，详见[素材说明](docs/assets/README.md)。

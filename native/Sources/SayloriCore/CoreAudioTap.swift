@@ -55,7 +55,7 @@ public final class CoreAudioTap: @unchecked Sendable {
     }
     private static func check(_ status: OSStatus, _ context: String) throws {
         guard status == noErr else {
-            throw SayError.message("\(context)失败（\(status)）。请在系统设置 → 隐私与安全 → 录屏与系统录音 → 仅系统录音中允许 TalkFloat；无需开启录屏。")
+            throw SayError.message("\(context)失败（\(status)）。请检查声音输出设备，并在首次设置中检测系统声音；首次使用或刚升级时，也请检查“仅系统录音”权限。无需开启录屏。")
         }
     }
     public static func processIDs() -> [AudioObjectID] {
@@ -88,7 +88,7 @@ public final class CoreAudioTap: @unchecked Sendable {
     public func start(source: AudioSource) async throws {
         guard lock.withLock({ if started || stopped { return false }; started = true; return true }) else { throw CancellationError() }
         let deadline = DispatchWorkItem { [weak self] in
-            self?.finish(error: SayError.message("系统采音启动超时。请允许 TalkFloat 的“仅系统录音”权限后重新打开 App；无需开启录屏。"))
+            self?.finish(error: SayError.message("系统采音启动超时。请处理仍未关闭的系统授权提示，检查输出设备后重试；无需开启录屏。"))
         }
         lock.withLock { timeout = deadline }
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 15, execute: deadline)

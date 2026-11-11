@@ -76,7 +76,7 @@ git diff --cached --stat
 
 ## 品牌图标
 
-`BrandArtwork.swift` 是菜单标志与 App 图标的共用轮廓。打包脚本在生成 icns 前调用可执行文件的 `--render-brand-icon` 入口，将确定性的纯色 PNG 输出到 `native/Resources/AppIcon.png`；此入口不启动窗口、采音或读取钥匙串。0.8.1 使用石墨色底与浅色字幕标志，原 imagegen 选定方案作为形状来源。
+`BrandArtwork.swift` 是菜单标志与 App 图标的共用轮廓。`native/Resources/AppIcon.png` 是已审阅的图标源，打包时直接生成 icns；需要修改图形时，先从组装好的 App 调用 `--render-brand-icon` 入口再审阅。不要运行尚未嵌入 Sparkle.framework 的裸 SwiftPM 可执行文件。0.8.1 使用石墨色底与浅色字幕标志，原 imagegen 选定方案作为形状来源。
 
 0.8.2 增加 `scripts/install-local.sh [--ad-hoc]`，安装到用户 Applications 并保留旧安装备份；正在运行时拒绝替换。安装命令见本文。仓库公开前额外执行 `python3 scripts/check-repository.py --history`，检查所有可达历史中的文本与文件范围。
 
@@ -95,3 +95,13 @@ git diff --cached --stat
 Chrome 测试先确认标签页实际有声：自动化工具可能将测试标签页静音，页面进度条走完不等于向系统输出了音频。正向播放 Chrome 样音；反向使用其他播放器播放另一份样音，并确认 Chrome-only 记录不含该句。测试输出与真实会议记录仍只留本机。
 
 0.8.7 默认存储改为 `~/Library/Application Support/TalkFloat/Recordings`，Recovery 同样位于 TalkFloat 下；不自动恢复旧 Saylori 目录。用户选定的自定义目录不变。
+
+## 首次设置与更新验证（0.9.0）
+
+日常菜单与独立设置/首次设置使用同一 SessionModel。首次设置的样音会产生一份普通 Markdown；本地模式不收取 API 费用，豆包模式使用用户凭据并按用量计费。静音不是权限拒绝；先播放有声内容，再核对真实采音帧与字幕。
+
+SwiftPM 固定 Sparkle 2.10.1，提交 Package.resolved。构建脚本嵌入完整 Framework，按叶子到外层签名各 helper/XPC。Developer ID 版本启用 Hardened Runtime 与时间戳；本机 ad-hoc 构建仅供开发，不作为正式发布。
+
+发布更新必须使用 App 的 SUPublicEDKey 对应私钥签名最终安装包。私钥保留钥匙串，不存仓库或日志；公证完成和票据绑定后再生成 Ed25519 签名，之后不能修改包内容。用 scripts/make-appcast.py 生成固定版本下载地址的 feed，上传 Release 附件并验证公开可下载后再提交 feed。完整步骤见 distribution.md。
+
+验收覆盖：首次设置退出/取消、权限拒绝与静音说明、模型准备取消、样音三句最终中英记录、设置键盘操作、选择菜单展开样式、字幕最小尺寸；更新需验证有效签名升级、被修改安装包拒绝、会话中/暂停/存档失败/目录面板打开时不可安装，以及升级后偏好和记录保留。干净 Mac、模型首次下载、旧系统和耳机热插拔没有实测时须如实标记。

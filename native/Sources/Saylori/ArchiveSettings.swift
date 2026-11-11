@@ -4,7 +4,8 @@ import SayloriCore
 
 extension SessionModel {
     func chooseArchiveDirectory(){
-        guard canChangeArchiveDirectory else{return}
+        guard canChangeArchiveDirectory,!archivePickerOpen else{return}
+        archivePickerOpen=true
         let panel=NSOpenPanel()
         panel.title="选择会议记录文件夹";panel.prompt="选择文件夹"
         panel.canChooseDirectories=true;panel.canChooseFiles=false
@@ -12,8 +13,12 @@ extension SessionModel {
         panel.directoryURL=archiveDirectory
         NSApp.activate(ignoringOtherApps:true)
         panel.begin { [weak self] response in
-            guard response == .OK,let url=panel.url else{return}
-            Task{@MainActor in await self?.setArchiveDirectory(url)}
+            Task{@MainActor in
+                guard let self else{return}
+                defer{self.archivePickerOpen=false}
+                guard response == .OK,let url=panel.url else{return}
+                await self.setArchiveDirectory(url)
+            }
         }
     }
 }

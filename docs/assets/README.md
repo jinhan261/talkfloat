@@ -7,3 +7,5 @@
 The on-screen video is **“40 Minutes of Real English Listening Practice for B1-B2 | Improve Your English by Just Listening”**, from **Speak English with David & Alice**, as identified in the supplied recording. It appears only to demonstrate TalkFloat working alongside another app. Third-party video imagery, text and trademarks remain their owners' property and are not licensed under this repository's MIT license. No endorsement is implied.
 
 2026-11-05 用户明确要求公开当前仓库，展示素材随仓库用于功能演示；这不构成对第三方视频内容的再授权。原始桌面文件保持不变；没有加入账号信息、密钥或其他桌面文件。
+
+2026-11-11：menu-light.png 与 menu-dark.png 更新为 0.9.0 的原生组件导出，使用示例配置；不含会议文字、密钥或私人路径。
