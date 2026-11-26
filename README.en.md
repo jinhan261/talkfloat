@@ -4,12 +4,12 @@
   <p><strong>Listen in English. Follow in Chinese.</strong></p>
   <p>Live captions above your apps. Native to the macOS menu bar.</p>
   <p>
-    <a href="https://github.com/jinhan261/talkfloat/releases/tag/v0.9.0"><img src="https://img.shields.io/badge/preview-v0.9.0-3478F6?style=flat&amp;labelColor=333333" alt="Preview 0.9.0"></a>
+    <a href="https://github.com/jinhan261/talkfloat/releases/tag/v0.9.2"><img src="https://img.shields.io/badge/preview-v0.9.2-3478F6?style=flat&amp;labelColor=333333" alt="Preview 0.9.2"></a>
     <img src="https://img.shields.io/badge/macOS-26.4%2B-555555?style=flat&amp;logo=apple&amp;logoColor=white&amp;labelColor=333333" alt="Local models require macOS 26.4+">
     <img src="https://img.shields.io/badge/chip-Apple_Silicon-555555?style=flat&amp;labelColor=333333" alt="Apple Silicon">
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-555555?style=flat&amp;labelColor=333333" alt="MIT license"></a>
   </p>
-  <p><a href="https://github.com/jinhan261/talkfloat/releases/tag/v0.9.0"><strong>Download DMG</strong></a> · <a href="#get-started">Get started</a> · <a href="https://github.com/jinhan261/talkfloat/issues">Report an issue</a></p>
+  <p><a href="https://github.com/jinhan261/talkfloat/releases/tag/v0.9.2"><strong>Download DMG</strong></a> · <a href="#get-started">Get started</a> · <a href="https://github.com/jinhan261/talkfloat/issues">Report an issue</a></p>
   <p><a href="README.md">简体中文</a> · <strong>English</strong></p>
 </div>
 
@@ -36,7 +36,7 @@
 
 **Apple Silicon Mac; macOS 26.4 or later recommended.** Local models require 26.4+. The Doubao build declares a minimum of 14.2; older systems still need full hardware validation. An Intel build is not available.
 
-1. **Install** — Download the DMG from [Releases](https://github.com/jinhan261/talkfloat/releases/tag/v0.9.0), drag TalkFloat into Applications, then open it there. Look for its menu bar icon.
+1. **Install** — Download the DMG from [Releases](https://github.com/jinhan261/talkfloat/releases/tag/v0.9.2), drag TalkFloat into Applications, then open it there. Look for its menu bar icon.
 2. **Complete setup** — Choose a model, check system audio, then play the built-in English sample to verify captions and the saved record. Local mode prepares Apple's language resources; Doubao uses your own API Key or App ID / Access Token.
 3. **Start translating** — Choose the system audio source, enable the microphone if needed, and click “开始翻译” (Start). Grant the corresponding audio permissions. **Screen recording permission is not required.**
 4. **Finish and review** — Click “结束并存档” (Finish and save), then “会议记录” (Meeting records) to open the Markdown files. Change their folder in settings.

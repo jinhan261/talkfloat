@@ -43,6 +43,9 @@ public struct CaptionState: Sendable {
             let old=storage[i]
             guard !old.translationFinal || item.translationFinal else{return}
             guard !old.sourceFinal || item.sourceFinal else{return}
+            // An in-flight translation of a shorter draft can finish after ASR
+            // has extended the same turn. Its readable pair is cached by the UI.
+            if !item.sourceFinal, item.endMS < old.endMS { return }
             item.receivedAt=old.receivedAt
             if item.translation.isEmpty && item.source==old.source {item.translation=old.translation}
             storage[i]=item
@@ -66,15 +69,17 @@ public struct CaptionState: Sendable {
             if isSource { sourceIndices[sid]=index } else { targetIndices[sid]=index; storage[index!].translationStarted=true }
         }
         guard let i=index else { return }
+        storage[i].endMS=max(storage[i].endMS,event.end)
+        if (event.type==654 || event.type==655), !event.text.isEmpty { storage[i].previewUpdatedAt=Date() }
         switch event.type {
         case 651: storage[i].source += event.text
         case 652:
             if !event.text.isEmpty { storage[i].source=event.text }
-            storage[i].sourceFinal=true; storage[i].endMS=max(storage[i].endMS,event.end)
+            storage[i].sourceFinal=true
         case 654: storage[i].translation += event.text
         case 655:
             if !event.text.isEmpty { storage[i].translation=event.text }
-            storage[i].translationFinal = !storage[i].translation.isEmpty; storage[i].endMS=max(storage[i].endMS,event.end)
+            storage[i].translationFinal = !storage[i].translation.isEmpty
         default: break
         }
     }

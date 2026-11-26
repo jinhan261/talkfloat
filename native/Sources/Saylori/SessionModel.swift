@@ -13,8 +13,10 @@ import Combine
     func setMode(_ value:TranslationMode){guard !active,!hasMeeting else{return};mode=value;notice="";localModelNotice=""}
     @Published var source=AudioSource.system {didSet{savePreference(source.id,forKey:"sourceID")}}
     @Published var sources:[AudioSource]=[.system,.chrome]
-    @Published var captions=CaptionState()
-    @Published var previewDrafts:[CaptionSegment]=[]
+    private(set) var captions=CaptionState()
+    private var previewDrafts:[CaptionSegment]=[]
+    @Published private(set) var captionWindow = CaptionWindow()
+    private var captionRefreshTask: Task<Void, Never>?
     @Published var localModelsReady=false
     @Published var preparingLocalModels=false
     var modelPreparationID=UUID()
@@ -25,13 +27,24 @@ import Combine
     private var fastSystem:AnyObject?
     private var fastMicrophone:AnyObject?
     private var localTranslations:[UUID:CaptionSegment]=[:]
-    var displayCaptions:[CaptionSegment]{
+    private func refreshCaptionWindow() {
         let recent=captions.recentSegments(limit:64)
         let readable=mode == .local ? recent.map{CaptionPresentation.keepingReadableTranslation($0,previous:localTranslations[$0.id])}:recent
-        return CaptionPresentation.live(cloud:readable,drafts:previewDrafts)
+        let next = CaptionPresentation.window(cloud: readable, drafts: previewDrafts)
+        let oldDeadline = captionWindow.nextRefresh
+        if next != captionWindow { captionWindow = next }
+        guard next.nextRefresh != oldDeadline else { return }
+        captionRefreshTask?.cancel()
+        captionRefreshTask = nil
+        if let deadline = next.nextRefresh {
+            captionRefreshTask = Task { [weak self] in
+                do { try await Task.sleep(for: .seconds(max(0, deadline.timeIntervalSinceNow))) }
+                catch { return }
+                self?.refreshCaptionWindow()
+            }
+        }
     }
-    var displayCurrent:CaptionSegment?{displayCaptions.last}
-    var displayContext:[CaptionSegment]{Array(displayCaptions.dropLast().suffix(24))}
+    var displayCurrent:CaptionSegment?{captionWindow.current}
     @Published var notice=""
     @Published var level:Float=0
     let access=CredentialSession()
@@ -180,7 +193,7 @@ import Combine
             if !localModelsReady{notice="请先准备本地英语与中文模型";return}
         }
         previewing=false
-        if meeting==nil { reconnects=0;streamClocks=[:];meeting=MeetingRecord(sourceName:source.name + "；麦克风按片段标注");meeting?.engine=mode;hasMeeting=true;captions=CaptionState();previewDrafts=[];localTranslations=[:];archiveError="";archiveURL=nil }
+        if meeting==nil { reconnects=0;streamClocks=[:];meeting=MeetingRecord(sourceName:source.name + "；麦克风按片段标注");meeting?.engine=mode;hasMeeting=true;captions=CaptionState();previewDrafts=[];localTranslations=[:];refreshCaptionWindow();archiveError="";archiveURL=nil }
         savePreference(source.id,forKey:"sourceID")
         let token=UUID();generation=token;notice="";phase = .connecting;level=0;sentFrames=0;receivedEvents=0
         operation=Task{[weak self] in await self?.connect(token)}
@@ -248,6 +261,7 @@ import Combine
         generation=UUID();capture?.stop();capture=nil;sender?.cancel();receiver?.cancel();sender=nil;receiver=nil
         if #available(macOS 26.4,*),let preview=fastSystem as? FastPreview{await preview.stop()};fastSystem=nil
         previewDrafts.removeAll{$0.audioOrigin == .system}
+        refreshCaptionWindow()
         if let client{await client.abort()};client=nil;level=0
         var interruptions=meeting?.interruptions ?? []
         interruptions.append(MeetingInterruption(origin:.system,reason:error.localizedDescription));meeting?.interruptions=interruptions
@@ -298,6 +312,7 @@ import Combine
         if #available(macOS 26.4,*),let preview=fastSystem as? FastPreview{await preview.stop()};fastSystem=nil
         await micStop.value
         previewDrafts=[]
+        refreshCaptionWindow()
         generation=UUID();receiver?.cancel();sender=nil;receiver=nil;client=nil
         if paused{meeting?.pauses.append(Date())}
         await saveRecord(ending:paused ? nil:"已结束",paused:paused)
@@ -314,6 +329,10 @@ import Combine
         guard streamClocks[sessionID]==nil else{return}
         let date=Date().addingTimeInterval(stats.streamStartedUptime-ProcessInfo.processInfo.systemUptime)
         streamClocks[sessionID]=date;captions.setStreamClock(sessionID,startedAt:date)
+        for index in previewDrafts.indices where previewDrafts[index].sessionID == sessionID {
+            previewDrafts[index].audioEpoch = date.timeIntervalSince1970
+        }
+        refreshCaptionWindow()
         TestDiagnostics.record("stream-clock",["session":sessionID,"epoch":date.timeIntervalSince1970])
     }
     private func weakPlaybackLeak(_ item:CaptionSegment)->Bool {
@@ -396,17 +415,19 @@ import Combine
         if let route=microphone{await route.stop()}
         if #available(macOS 26.4,*),let preview=fastMicrophone as? FastPreview{await preview.stop()};fastMicrophone=nil
         previewDrafts.removeAll{$0.audioOrigin == .microphone}
+        refreshCaptionWindow()
         microphoneGeneration=UUID();microphone=nil;microphoneReady=false;microphoneLevel=0;microphoneBusy=false
     }
-    private func consume(_ update:TranslationUpdate,sessionID:String,origin:AudioOrigin){
+    func consume(_ update:TranslationUpdate,sessionID:String,origin:AudioOrigin){
         receivedEvents += 1
         switch update {
         case .cloud(let event):
             TestDiagnostics.record("event",["origin":origin.rawValue,"session":sessionID,"type":event.type,"text":event.text,"status":event.status,"message":event.message,"startMS":event.start,"endMS":event.end,"receivedUptime":event.receivedAt,"displayLagMS":(ProcessInfo.processInfo.systemUptime-event.receivedAt)*1000])
-            captions.apply(event,streamID:sessionID)
             if origin == .system,event.type==250{level=0}
+            guard (650...655).contains(event.type) else { return }
+            captions.apply(event,streamID:sessionID)
         case .local(var item):
-            item.audioEpoch=streamClocks[sessionID]?.timeIntervalSince1970
+            item.audioEpoch=streamClocks[sessionID]?.timeIntervalSince1970 ?? item.audioEpoch
             item.weakPlaybackLeak=weakPlaybackLeak(item);item.playbackConfidence=playbackConfidence(item)
             captions.upsertLocal(item)
             if !item.translation.isEmpty,localTranslations[item.id]?.translationFinal != true || item.translationFinal {
@@ -420,13 +441,16 @@ import Combine
             captions.classifyMicrophone(sessionID,using:weakPlaybackLeak)
             captions.measurePlayback(sessionID,using:playbackConfidence)
         }
-        tracePresentation();scheduleSave()
+        refreshCaptionWindow();tracePresentation();scheduleSave()
     }
     private func tracePresentation(){
         guard TestDiagnostics.directory != nil else{return}
-        let visible=Array(displayCaptions.suffix(25))
+        let visible=Array(captionWindow.history.suffix(24)) + [captionWindow.current].compactMap { $0 }
         let mic=visible.filter{$0.audioOrigin == .microphone}.map{["source":$0.source,"preview":$0.provisional == true,"confidence":$0.playbackConfidence ?? 0] as [String:Any]}
-        TestDiagnostics.record("presentation",["micCandidates":mic,"count":visible.count,"currentOrigin":visible.last?.audioOrigin.rawValue ?? "none"])
+        let current = captionWindow.current
+        TestDiagnostics.record("presentation",["micCandidates":mic,"count":visible.count,
+            "currentOrigin":current?.audioOrigin.rawValue ?? "none","currentID":current?.id.uuidString ?? "",
+            "currentHasTranslation":current?.hasReadableTranslation ?? false])
     }
     private func makeFastPreview(sessionID:String,origin:AudioOrigin) async -> AnyObject? {
         guard mode == .doubao,!CommandLine.arguments.contains("--no-cloud-preview") else{return nil}
@@ -444,6 +468,7 @@ import Combine
                     value.id=self.previewDrafts[i].id;value.receivedAt=self.previewDrafts[i].receivedAt;self.previewDrafts[i]=value
                 }else{self.previewDrafts.append(value)}
                 self.previewDrafts=CaptionPresentation.latestDrafts(self.previewDrafts)
+                self.refreshCaptionWindow()
                 self.tracePresentation()
                 if self.displayCurrent?.id==value.id {
                     TestDiagnostics.record("preview-display",["session":sessionID,"origin":origin.rawValue,"startMS":value.startMS,"endMS":value.endMS,"source":value.source,"text":value.translation,"uptime":ProcessInfo.processInfo.systemUptime])

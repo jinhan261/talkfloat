@@ -7,6 +7,8 @@ import SayloriCore
 @MainActor enum DesignReview {
     static func render(to directory:URL) {
         try? FileManager.default.createDirectory(at:directory,withIntermediateDirectories:true)
+        renderLongCaptions(to:directory)
+        renderCaptionFocus(to:directory)
         let model=SessionModel(reviewOnly:true)
         model.access.useForSession(Credentials(apiKey:"design-example-not-a-real-key"))
         model.source = .chrome;model.microphoneEnabled=true
@@ -52,6 +54,62 @@ import SayloriCore
             export(CaptionView(model:model).frame(width:720,height:340),name:"\(style.rawValue)-caption",scheme:style == .light ? .light:.dark,directory:directory)
             export(CaptionView(model:model).frame(width:400,height:300),name:"\(style.rawValue)-narrow",scheme:style == .light ? .light:.dark,directory:directory)
         }
+    }
+    /// Exercise the production caption view with final bilingual turns, including
+    /// word wrapping at the minimum window size and the largest user font.
+    static func renderLongCaptions(to directory:URL) {
+        try? FileManager.default.createDirectory(at:directory,withIntermediateDirectories:true)
+        let model = SessionModel(reviewOnly:true)
+        model.mode = .local
+        model.phase = .live
+        model.showSource = true
+        model.captionStyle = .dark
+        model.backgroundOpacity = 1
+        var item = CaptionSegment(sessionID:"example",startMS:0)
+        item.source = "Choose one task and write down the first step."
+        item.translation = "选一项任务，写下第一步。"
+        item.sourceFinal = true
+        item.translationFinal = true
+        model.consume(.local(item),sessionID:item.sessionID,origin:.system)
+        item.id = UUID()
+        item.startMS = 3000
+        item.source = "When the timer goes off, write down what you learned so you can pick up where you left off tomorrow morning."
+        item.translation = "计时结束后，记下你学到的东西，这样明天早上就能接着做。"
+        model.consume(.local(item),sessionID:item.sessionID,origin:.system)
+        for (width,height,font) in [(720,340,30),(400,300,30),(400,300,38),(400,520,38)] {
+            model.fontSize = CGFloat(font)
+            export(CaptionView(model:model).frame(width:CGFloat(width),height:CGFloat(height)),
+                   name:"long-\(width)x\(height)-\(font)",scheme:.dark,directory:directory)
+        }
+    }
+    private static func renderCaptionFocus(to directory: URL) {
+        // Replay both channels through the normal event handler at minute 60.
+        // The later-arriving microphone turn lies inside the system speech.
+        let model = SessionModel(reviewOnly:true)
+        model.mode = .local
+        model.phase = .live
+        model.captionStyle = .dark
+        model.backgroundOpacity = 1
+        model.showSource = true
+        model.fontSize = 30
+        var system = CaptionSegment(sessionID:"remote",startMS:3_600_000)
+        system.audioEpoch = Date().timeIntervalSince1970 - 3605
+        system.endMS = 3_605_000
+        system.source = "Can we move the meeting to Friday?"
+        var mic = CaptionSegment(sessionID:"mic",startMS:3_602_000)
+        mic.audioEpoch = system.audioEpoch
+        mic.endMS = 3_604_000
+        mic.origin = .microphone
+        mic.source = "I have one question."
+        mic.translation = "我有一个问题。"
+        mic.translationFinal = true
+        model.consume(.local(system),sessionID:system.sessionID,origin:.system)
+        model.consume(.local(mic),sessionID:mic.sessionID,origin:.microphone)
+        export(CaptionView(model:model).frame(width:640,height:360),name:"focus-system-english",scheme:.dark,directory:directory)
+        system.translation = "我们可以把会议改到周五吗？"
+        system.translationFinal = true
+        model.consume(.local(system),sessionID:system.sessionID,origin:.system)
+        export(CaptionView(model:model).frame(width:640,height:360),name:"focus-system-chinese",scheme:.dark,directory:directory)
     }
     private static func export<V:View>(_ root:V,name:String,scheme:ColorScheme,directory:URL) {
         let host=NSHostingView(rootView:root.environment(\.colorScheme,scheme).environment(\.controlActiveState,.key))

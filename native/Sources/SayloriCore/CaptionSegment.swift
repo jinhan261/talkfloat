@@ -20,6 +20,7 @@ public struct CaptionSegment: Codable, Identifiable, Sendable, Equatable {
     public var origin: AudioOrigin?
     /// Local preview only; cloud archives never substitute speculative text for final text.
     public var provisional: Bool?
+    /// Arrival of translated text, including an on-device preview or a service revision.
     public var previewUpdatedAt: Date?
     /// Absolute clock of sample zero, shared by cloud and local ASR in this stream.
     public var audioEpoch:Double?
@@ -28,5 +29,6 @@ public struct CaptionSegment: Codable, Identifiable, Sendable, Equatable {
     public var weakPlaybackLeak:Bool?
     public var playbackConfidence:Double?
     public var audioOrigin: AudioOrigin { origin ?? .system }
+    public var hasReadableTranslation: Bool { translation.rangeOfCharacter(from: .alphanumerics) != nil }
     public init(sessionID: String, startMS: Int) { self.sessionID=sessionID; self.startMS=startMS }
 }
